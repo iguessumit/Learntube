@@ -1,0 +1,3077 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#07080B" id="meta-theme-color" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="TubeVault" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23FF2A55'/%3E%3Cstop offset='100%25' stop-color='%23C80026'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='18' fill='url(%23g)'/%3E%3Crect x='14' y='16' width='36' height='32' rx='8' fill='none' stroke='%23FFFFFF' stroke-width='3' stroke-opacity='0.35'/%3E%3Cpath d='M27 23.5v17l14-8.5z' fill='%23FFFFFF'/%3E%3C/svg%3E" />
+  <link rel="manifest" id="pwa-manifest" />
+  <title>TubeVault — Premium In-App YouTube Player, Folders & History</title>
+
+  <!-- Typography & Tailwind CSS Engine -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            display: ['Plus Jakarta Sans', 'Inter', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Instant Theme & Web App Manifest Bootstrap -->
+  <script>
+    (function () {
+      try {
+        const savedTheme = localStorage.getItem('tubevault_theme_v1');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      } catch (e) {
+        document.documentElement.classList.add('dark');
+      }
+
+      // Inject self-contained Web App Manifest for GitHub Pages & Home Screen install
+      try {
+        const iconSvg = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23FF2A55'/%3E%3Cstop offset='100%25' stop-color='%23C80026'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='512' height='512' rx='128' fill='url(%23g)'/%3E%3Crect x='108' y='124' width='296' height='264' rx='64' fill='none' stroke='%23FFFFFF' stroke-width='20' stroke-opacity='0.35'/%3E%3Cpath d='M214 188v136l112-68z' fill='%23FFFFFF'/%3E%3C/svg%3E";
+        const manifestObj = {
+          name: 'TubeVault',
+          short_name: 'TubeVault',
+          description: 'In-App YouTube Player, Saved Folders & Watch History',
+          start_url: './',
+          scope: './',
+          display: 'standalone',
+          background_color: '#090A0E',
+          theme_color: '#FF0033',
+          icons: [
+            { src: iconSvg, sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable' },
+            { src: iconSvg, sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }
+          ],
+          share_target: {
+            action: './',
+            method: 'GET',
+            enctype: 'application/x-www-form-urlencoded',
+            params: {
+              title: 'title',
+              text: 'text',
+              url: 'url'
+            }
+          }
+        };
+        const manifestEl = document.getElementById('pwa-manifest');
+        if (manifestEl) {
+          manifestEl.setAttribute('href', 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifestObj)));
+        }
+      } catch (e) {}
+    })();
+  </script>
+
+  <style>
+    /* ==========================================================================
+       LIQUID GLASS (FOCAL CHROME) & CRISP ELEVATED SURFACES
+       ========================================================================== */
+    :root {
+      --bg-canvas: #F5F6FA;
+      --orb-crimson: rgba(255, 0, 51, 0.05);
+      --orb-ice: rgba(148, 185, 255, 0.12);
+      --surface-bg: #FFFFFF;
+      --surface-subtle: #F4F5F8;
+      --surface-border: rgba(15, 23, 42, 0.06);
+      --surface-border-hover: rgba(255, 0, 51, 0.28);
+      --glass-bar: rgba(255, 255, 255, 0.82);
+      --glass-modal: rgba(255, 255, 255, 0.94);
+      --glass-border: rgba(15, 23, 42, 0.08);
+      --glass-specular: inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+      --card-shadow: 0 2px 14px -2px rgba(15, 23, 42, 0.04);
+      --card-shadow-hover: 0 14px 28px -8px rgba(15, 23, 42, 0.10);
+      --text-primary: #09090B;
+      --text-secondary: #3F3F46;
+      --text-muted: #71717A;
+      --input-bg: #F4F5F8;
+      --scrollbar-thumb: rgba(15, 23, 42, 0.16);
+    }
+
+    html.dark {
+      --bg-canvas: #08090C;
+      --orb-crimson: rgba(255, 0, 51, 0.08);
+      --orb-ice: rgba(99, 130, 210, 0.05);
+      --surface-bg: #111217;
+      --surface-subtle: #181A20;
+      --surface-border: rgba(255, 255, 255, 0.06);
+      --surface-border-hover: rgba(255, 0, 51, 0.34);
+      --glass-bar: rgba(13, 14, 19, 0.82);
+      --glass-modal: rgba(20, 21, 28, 0.92);
+      --glass-border: rgba(255, 255, 255, 0.09);
+      --glass-specular: inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+      --card-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.45);
+      --card-shadow-hover: 0 16px 34px -8px rgba(0, 0, 0, 0.72);
+      --text-primary: #FAFAFA;
+      --text-secondary: #D4D4D8;
+      --text-muted: #8E8E98;
+      --input-bg: #181A20;
+      --scrollbar-thumb: rgba(255, 255, 255, 0.16);
+    }
+
+    /* ==========================================================================
+       BASE & CHROME VIEWPORT ADAPTATION (320px MOBILE -> ULTRAWIDE DESKTOP)
+       ========================================================================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      width: 100%;
+      max-width: 100vw;
+      overflow-x: clip;
+      font-size: 16px;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    body {
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      width: 100%;
+      max-width: 100vw;
+      min-height: 100vh;
+      min-height: 100dvh;
+      margin: 0;
+      padding: 0;
+      overflow-x: clip;
+      -webkit-tap-highlight-color: transparent;
+      transition: background-color 0.35s ease, color 0.35s ease;
+    }
+
+    /* Ambient Liquid Refractive Backdrop Orbs */
+    .liquid-backdrop {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+
+    .liquid-orb-1 {
+      position: absolute;
+      top: -16vh;
+      left: 18%;
+      width: 58vw;
+      height: 52vh;
+      border-radius: 9999px;
+      background: radial-gradient(circle, var(--orb-crimson) 0%, transparent 70%);
+      filter: blur(42px);
+      animation: orbFloatA 16s ease-in-out infinite alternate;
+    }
+
+    .liquid-orb-2 {
+      position: absolute;
+      top: 22vh;
+      right: -10%;
+      width: 52vw;
+      height: 54vh;
+      border-radius: 9999px;
+      background: radial-gradient(circle, var(--orb-ice) 0%, transparent 72%);
+      filter: blur(50px);
+      animation: orbFloatB 20s ease-in-out infinite alternate;
+    }
+
+    @keyframes orbFloatA {
+      from { transform: translate3d(-4%, 0, 0) scale(1); }
+      to { transform: translate3d(6%, 4%, 0) scale(1.08); }
+    }
+
+    @keyframes orbFloatB {
+      from { transform: translate3d(0, -3%, 0) scale(1.04); }
+      to { transform: translate3d(-6%, 5%, 0) scale(0.96); }
+    }
+
+    @media (max-width: 767px) {
+      body {
+        padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+      }
+      .chrome-mobile-dock {
+        bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)) !important;
+        left: max(0.75rem, env(safe-area-inset-left, 0px)) !important;
+        right: max(0.75rem, env(safe-area-inset-right, 0px)) !important;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      #view-player .aspect-video {
+        max-height: 64vh;
+      }
+    }
+
+    @media (min-width: 1280px) {
+      #saved-videos-grid {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
+      }
+    }
+
+    /* ==========================================================================
+       FOCAL LIQUID GLASS & CRISP CONTENT SURFACES
+       ========================================================================== */
+    .glass-bar {
+      background: var(--glass-bar);
+      backdrop-filter: blur(28px) saturate(195%);
+      -webkit-backdrop-filter: blur(28px) saturate(195%);
+      border-bottom: 1px solid var(--glass-border);
+      box-shadow: 0 8px 28px -10px rgba(0, 0, 0, 0.14), var(--glass-specular);
+    }
+
+    .glass-dock {
+      background: var(--glass-modal);
+      backdrop-filter: blur(32px) saturate(210%);
+      -webkit-backdrop-filter: blur(32px) saturate(210%);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 20px 44px -10px rgba(0, 0, 0, 0.44), var(--glass-specular);
+    }
+
+    .glass-modal-panel {
+      background: var(--glass-modal);
+      backdrop-filter: blur(36px) saturate(210%);
+      -webkit-backdrop-filter: blur(36px) saturate(210%);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 32px 72px -16px rgba(0, 0, 0, 0.65), var(--glass-specular);
+    }
+
+    /* Clean Solid Elevated Cards for Content & Lists */
+    .surface-card {
+      background: var(--surface-bg);
+      border: 1px solid var(--surface-border);
+      box-shadow: var(--card-shadow);
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      transition: transform 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+                  box-shadow 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+                  border-color 0.24s ease,
+                  background-color 0.24s ease;
+    }
+
+    .surface-card-interactive:hover {
+      border-color: var(--surface-border-hover);
+      box-shadow: var(--card-shadow-hover);
+      transform: translateY(-4px);
+    }
+
+    .surface-card-interactive:active {
+      transform: translateY(-1px) scale(0.992);
+    }
+
+    .surface-card-interactive:hover {
+      border-color: var(--surface-border-hover);
+      box-shadow: var(--card-shadow-hover);
+      transform: translateY(-4px);
+    }
+
+    .surface-subtle {
+      background: var(--surface-subtle);
+      border: 1px solid var(--surface-border);
+      transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .surface-btn {
+      background: var(--surface-subtle);
+      border: 1px solid var(--surface-border);
+      transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .surface-btn:hover {
+      border-color: var(--surface-border-hover);
+    }
+
+    .surface-btn:active {
+      transform: scale(0.96);
+    }
+
+    .surface-input {
+      background: var(--input-bg);
+      border: 1px solid var(--surface-border);
+      color: var(--text-primary);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    }
+
+    .surface-input:focus {
+      outline: none;
+      border-color: #FF0033;
+      box-shadow: 0 0 0 3px rgba(255, 0, 51, 0.16);
+    }
+
+    /* Glossy Crimson Liquid Button */
+    .btn-liquid-crimson {
+      background: linear-gradient(180deg, #FF2A55 0%, #E0002D 100%);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      box-shadow: 0 8px 20px -5px rgba(255, 0, 51, 0.50), inset 0 1px 1px rgba(255, 255, 255, 0.42);
+      color: #FFFFFF;
+      transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease, filter 0.2s ease;
+    }
+
+    .btn-liquid-crimson:hover {
+      filter: brightness(1.06);
+      box-shadow: 0 12px 26px -5px rgba(255, 0, 51, 0.62), inset 0 1px 1px rgba(255, 255, 255, 0.52);
+    }
+
+    .btn-liquid-crimson:active {
+      transform: scale(0.96);
+    }
+
+    /* Spring Sliding Tab Indicator */
+    .tab-pill-indicator {
+      position: absolute;
+      top: 4px;
+      bottom: 4px;
+      left: 0;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #FF2954 0%, #D9002B 100%);
+      border: 1px solid rgba(255, 255, 255, 0.30);
+      box-shadow: 0 6px 18px -4px rgba(255, 0, 51, 0.54), inset 0 1px 1px rgba(255, 255, 255, 0.42);
+      transition: transform 0.44s cubic-bezier(0.22, 1, 0.36, 1), width 0.44s cubic-bezier(0.22, 1, 0.36, 1);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Smooth View & Card Entrance Animations */
+    @keyframes viewFadeSlide {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .view-enter {
+      animation: viewFadeSlide 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    @keyframes cardRiseIn {
+      from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .animate-card-in {
+      opacity: 0;
+      animation: cardRiseIn 0.44s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    @keyframes backdropFade {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .animate-backdrop {
+      animation: backdropFade 0.24s ease forwards;
+    }
+
+    @keyframes modalSpring {
+      from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.96);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .animate-modal {
+      animation: modalSpring 0.34s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    @keyframes seekRipple {
+      0% { opacity: 0; transform: scale(0.8); }
+      30% { opacity: 1; transform: scale(1.05); }
+      100% { opacity: 0; transform: scale(1.15); }
+    }
+
+    .animate-seek-badge {
+      animation: seekRipple 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--scrollbar-thumb);
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="min-h-[100dvh] w-full selection:bg-[#FF0033] selection:text-white relative">
+
+  <!-- Ambient Liquid Glass Caustic Orbs -->
+  <div class="liquid-backdrop" aria-hidden="true">
+    <div class="liquid-orb-1"></div>
+    <div class="liquid-orb-2"></div>
+  </div>
+
+  <!-- ==================== FLOATING LIQUID GLASS TOP HEADER ==================== -->
+  <header class="sticky top-0 z-30 glass-bar w-full">
+    <div class="max-w-[1320px] w-full mx-auto px-4 sm:px-6 lg:px-8 h-[64px] flex items-center justify-between gap-3 min-w-0">
+
+      <!-- Bespoke Vault Brand Mark & Editorial Wordmark -->
+      <button onclick="switchTab('player')" class="flex items-center gap-2.5 text-left group focus:outline-none shrink-0">
+        <div class="relative w-9 h-9 rounded-xl btn-liquid-crimson flex items-center justify-center shadow-md group-hover:scale-105 transition-transform duration-300">
+          <svg class="w-[18px] h-[18px] text-white" viewBox="0 0 24 24" fill="none">
+            <rect x="2.75" y="4.25" width="18.5" height="15.5" rx="4.5" stroke="currentColor" stroke-width="1.85" stroke-opacity="0.45" />
+            <path d="M10 8.75L15.75 12L10 15.25V8.75Z" fill="currentColor" />
+          </svg>
+        </div>
+        <span class="font-display font-extrabold text-[18px] sm:text-[19px] tracking-[-0.03em] leading-none text-zinc-950 dark:text-white">
+          Tube<span class="text-[#FF0033]">Vault</span>
+        </span>
+      </button>
+
+      <!-- Desktop Segmented Sliding Liquid Glass Tab Bar -->
+      <nav aria-label="Primary Navigation" class="hidden md:flex items-center">
+        <div id="desk-nav-container" class="relative flex items-center p-1 rounded-2xl surface-subtle">
+          <div id="desk-nav-pill" class="tab-pill-indicator"></div>
+
+          <button id="desk-tab-player" onclick="switchTab('player')" class="relative z-10 flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-extrabold tracking-[-0.01em] transition-colors duration-200 text-white">
+            <!-- Cinema Play Circle Icon -->
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9.25" />
+              <path d="M10.25 8.75L15.5 12L10.25 15.25V8.75Z" fill="currentColor" stroke="none" />
+            </svg>
+            <span>Player</span>
+          </button>
+
+          <button id="desk-tab-saved" onclick="switchTab('saved')" class="relative z-10 flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-extrabold tracking-[-0.01em] transition-colors duration-200 text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white">
+            <!-- Curated Vault Folder Icon -->
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3.75 7.5A2.75 2.75 0 016.5 4.75h3.1c.73 0 1.43.29 1.94.81l.92.94c.51.52 1.21.81 1.94.81h3.1a2.75 2.75 0 012.75 2.75v6.44a2.75 2.75 0 01-2.75 2.75H6.5a2.75 2.75 0 01-2.75-2.75V7.5z" />
+              <path d="M8.5 13.25h7" stroke-opacity="0.7" />
+            </svg>
+            <span>Saved</span>
+            <span id="desk-saved-count" class="px-1.5 py-0.5 text-[10px] font-extrabold rounded-md bg-black/10 dark:bg-white/15 tabular-nums">0</span>
+          </button>
+
+          <button id="desk-tab-history" onclick="switchTab('history')" class="relative z-10 flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-extrabold tracking-[-0.01em] transition-colors duration-200 text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white">
+            <!-- Timeline Watch History Icon -->
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3.5 12a8.5 8.5 0 1 0 2.49-6.01L3.5 8.5" />
+              <path d="M3.5 3.75v4.75h4.75" />
+              <path d="M12 7.75v4.5l3 1.75" />
+            </svg>
+            <span>History</span>
+            <span id="desk-history-count" class="px-1.5 py-0.5 text-[10px] font-extrabold rounded-md bg-black/10 dark:bg-white/15 tabular-nums">0</span>
+          </button>
+        </div>
+      </nav>
+
+      <!-- Right Action Cluster: Theme Toggle & + Add Video -->
+      <div class="flex items-center gap-2.5 shrink-0">
+        <!-- Light / Dark Liquid Glass Switch -->
+        <button id="theme-toggle-btn" onclick="toggleTheme()" title="Switch Theme" aria-label="Toggle Light / Dark Mode" class="w-10 h-10 shrink-0 rounded-2xl surface-btn flex items-center justify-center text-zinc-800 dark:text-zinc-200 hover:text-[#FF0033] dark:hover:text-[#FF0033]">
+          <svg id="icon-sun" class="w-[18px] h-[18px] hidden dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4.25" />
+            <path d="M12 2.5v2M12 19.5v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2.5 12h2M19.5 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+          </svg>
+          <svg id="icon-moon" class="w-[18px] h-[18px] block dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.35 14.35A8.5 8.5 0 0 1 9.65 3.65a8.5 8.5 0 1 0 10.7 10.7Z" />
+          </svg>
+        </button>
+
+        <!-- Primary "+ Add Video" CTA -->
+        <button onclick="openAddModal()" class="h-10 px-4 shrink-0 rounded-2xl btn-liquid-crimson text-[13px] font-extrabold tracking-[-0.01em] flex items-center gap-2">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          <span>Add Video</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ==================== MAIN WORKSPACE CONTAINER ==================== -->
+  <main class="relative z-10 max-w-[1320px] w-full mx-auto px-3.5 sm:px-6 lg:px-8 pt-5 sm:pt-7 pb-10">
+
+    <!-- ========================================================================
+         TAB 1: IN-APP YOUTUBE PLAYER & LIVE WATCH TRACKER
+         ======================================================================== -->
+    <section id="view-player" class="space-y-6 min-w-0">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start min-w-0">
+
+        <!-- Left 8 Columns: Unified Theater Stage & Details -->
+        <div class="lg:col-span-8 min-w-0 space-y-4">
+
+          <!-- Unified Theater Card (Video + Timeline + Title & Actions) -->
+          <div id="player-stage-wrapper" class="surface-card rounded-3xl overflow-hidden relative group">
+            <div class="aspect-video w-full bg-black relative overflow-hidden">
+              <!-- Embedded In-App IFrame Container -->
+              <div id="yt-iframe-host" class="w-full h-full"></div>
+
+              <!-- Empty State Placeholder -->
+              <div id="player-empty-state" class="hidden absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-zinc-950/95">
+                <div class="w-12 h-12 rounded-2xl bg-[#FF0033]/15 border border-[#FF0033]/35 flex items-center justify-center mb-3">
+                  <svg class="w-6 h-6 text-[#FF0033]" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+                <h2 class="font-display font-extrabold text-lg text-white">No Video Selected</h2>
+                <p class="text-xs text-zinc-400 mt-1 max-w-xs">Paste any YouTube link to play in-app.</p>
+                <button onclick="openAddModal()" class="mt-4 px-4 py-2 rounded-xl btn-liquid-crimson text-xs font-extrabold">
+                  + Add Video
+                </button>
+              </div>
+
+              <!-- IN-APP TOUCH SHIELD -->
+              <div id="inapp-touch-shield" class="absolute inset-0 z-10 cursor-pointer select-none flex items-center justify-between px-8">
+                <div id="seek-feedback-left" class="opacity-0 pointer-events-none px-3.5 py-2 rounded-full bg-black/70 backdrop-blur-xl border border-white/20 text-white text-xs font-extrabold flex items-center gap-1.5">
+                  <span>« 10s</span>
+                </div>
+
+                <div id="center-tap-badge" class="opacity-0 pointer-events-none w-14 h-14 rounded-full bg-black/70 backdrop-blur-xl border border-white/25 text-white flex items-center justify-center transition-opacity duration-200">
+                  <svg id="center-tap-icon" class="w-6 h-6 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+
+                <div id="seek-feedback-right" class="opacity-0 pointer-events-none px-3.5 py-2 rounded-full bg-black/70 backdrop-blur-xl border border-white/20 text-white text-xs font-extrabold flex items-center gap-1.5">
+                  <span>10s »</span>
+                </div>
+              </div>
+
+              <!-- Top-Right In-App Lock Status Pill -->
+              <div class="absolute top-3 right-3 z-20 flex items-center gap-1.5">
+                <button id="shield-toggle-btn" onclick="toggleTouchShield(event)" title="In-App Lock prevents accidental taps from opening the external YouTube app" class="px-2.5 py-1 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-xl border border-white/15 text-[11px] font-extrabold text-white flex items-center gap-1.5 transition-colors">
+                  <span id="shield-dot" class="w-1.5 h-1.5 rounded-full bg-[#FF0033] animate-pulse"></span>
+                  <span id="shield-label">In-App Lock</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Interactive Scrubbing Progress Bar (Flush with Video Stage) -->
+            <div id="player-scrubber" class="relative h-2 w-full bg-black/10 dark:bg-white/10 cursor-pointer group/scrub select-none" onclick="handleScrubClick(event)" onmousemove="handleScrubHover(event)" onmouseleave="hideScrubTooltip()">
+              <div id="scrub-tooltip" class="hidden absolute -top-8 -translate-x-1/2 px-2 py-0.5 rounded-lg bg-zinc-950/90 backdrop-blur-md text-white text-[11px] font-extrabold tabular-nums shadow-lg pointer-events-none border border-white/20">
+                0:00
+              </div>
+              <div id="player-progress-fill" class="h-full bg-gradient-to-r from-[#FF0033] to-[#FF3B63] relative transition-[width] duration-150" style="width: 0%;">
+                <span class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3.5 h-3.5 rounded-full bg-[#FF0033] border-2 border-white shadow-md scale-90 group-hover/scrub:scale-110 transition-transform"></span>
+              </div>
+            </div>
+
+            <!-- Compact Transport Controls Row -->
+            <div class="px-4 py-3 flex flex-wrap items-center justify-between gap-2 border-b border-black/[0.05] dark:border-white/[0.06]">
+              <div class="flex items-center gap-1.5 sm:gap-2">
+                <button onclick="seekRelative(-10)" title="Rewind 10s" class="h-8 px-2.5 rounded-xl surface-btn text-xs font-extrabold text-zinc-700 dark:text-zinc-300 hover:text-[#FF0033]">
+                  -10s
+                </button>
+
+                <button id="btn-play-pause" onclick="togglePlayPause()" class="h-8 px-3.5 rounded-xl btn-liquid-crimson text-xs font-extrabold flex items-center gap-1.5">
+                  <svg id="play-pause-icon" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                  <span id="play-pause-label">Play</span>
+                </button>
+
+                <button onclick="seekRelative(10)" title="Forward 10s" class="h-8 px-2.5 rounded-xl surface-btn text-xs font-extrabold text-zinc-700 dark:text-zinc-300 hover:text-[#FF0033]">
+                  +10s
+                </button>
+
+                <div class="pl-1.5 text-xs font-extrabold tabular-nums text-zinc-500 dark:text-zinc-400">
+                  <span id="player-current-time" class="text-zinc-950 dark:text-white">0:00</span>
+                  <span class="mx-1 opacity-40">/</span>
+                  <span id="player-total-time">0:00</span>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-1.5">
+                <button id="btn-playback-speed" onclick="cyclePlaybackSpeed()" title="Playback Speed" class="h-8 px-2.5 rounded-xl surface-btn text-xs font-extrabold tabular-nums text-zinc-700 dark:text-zinc-300 hover:text-[#FF0033]">
+                  1x
+                </button>
+
+                <button id="btn-mute" onclick="toggleMute()" title="Mute / Unmute" class="w-8 h-8 rounded-xl surface-btn flex items-center justify-center text-zinc-700 dark:text-zinc-300 hover:text-[#FF0033]">
+                  <svg id="icon-vol-on" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                  </svg>
+                  <svg id="icon-vol-off" class="w-4 h-4 hidden text-[#FF0033]" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <line x1="23" y1="9" x2="17" y2="15"></line>
+                    <line x1="17" y1="9" x2="23" y2="15"></line>
+                  </svg>
+                </button>
+
+                <button onclick="togglePlayerFullscreen()" title="Fullscreen" class="w-8 h-8 rounded-xl surface-btn flex items-center justify-center text-zinc-700 dark:text-zinc-300 hover:text-[#FF0033]">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Integrated Video Title, Channel & Action Bar -->
+            <div class="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 min-w-0">
+              <div class="space-y-1 min-w-0 flex-1">
+                <div class="flex items-center gap-2 text-xs font-extrabold min-w-0">
+                  <span id="active-video-folder-badge" class="text-[#FF0033] truncate max-w-[160px] sm:max-w-[240px]">Now Playing</span>
+                  <span class="text-zinc-400 shrink-0">•</span>
+                  <span id="active-video-percent-badge" class="tabular-nums text-zinc-500 dark:text-zinc-400 shrink-0">0% watched</span>
+                </div>
+                <h1 id="active-video-title" class="font-display font-extrabold text-base sm:text-xl tracking-tight text-zinc-950 dark:text-white leading-snug break-words line-clamp-2">
+                  Select or add a video
+                </h1>
+                <p id="active-video-channel" class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 truncate">
+                  TubeVault In-App Player
+                </p>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2 shrink-0">
+                <button onclick="toggleNotesDrawer()" id="btn-toggle-notes" class="h-9 px-3 rounded-xl surface-btn text-xs font-extrabold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 group">
+                  <svg class="w-3.5 h-3.5 text-[#FF0033] group-hover:rotate-6 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                  </svg>
+                  <span>Notes</span>
+                  <span id="notes-count-badge" class="px-1.5 py-0.5 rounded-md bg-black/5 dark:bg-white/10 text-[10px] tabular-nums">0</span>
+                </button>
+
+                <button onclick="saveCurrentVideoToFolder()" class="h-9 px-3 rounded-xl surface-btn text-xs font-extrabold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 group">
+                  <svg class="w-3.5 h-3.5 text-[#FF0033] group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21l-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                  </svg>
+                  <span>Save</span>
+                </button>
+
+                <button onclick="shareCurrentVideo()" class="h-9 px-3.5 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-xs font-extrabold flex items-center gap-1.5 hover:opacity-90 active:scale-95 transition-all group">
+                  <svg class="w-3.5 h-3.5 group-hover:-translate-y-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                    <polyline points="16 6 12 2 8 6" />
+                    <line x1="12" y1="2" x2="12" y2="15" />
+                  </svg>
+                  <span>Share</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Collapsible Timestamped Notes Drawer -->
+            <div id="video-notes-drawer" class="hidden px-4 sm:px-5 pb-5 pt-3 border-t border-black/[0.05] dark:border-white/[0.06] space-y-3 bg-black/[0.015] dark:bg-white/[0.015]">
+              <form onsubmit="addVideoNote(event)" class="flex gap-2">
+                <input id="note-input" type="text" placeholder="Pin a note at the current playback time..." class="surface-input flex-1 min-w-0 h-9 px-3.5 rounded-xl text-xs font-medium" />
+                <button type="submit" class="h-9 px-3.5 rounded-xl btn-liquid-crimson text-xs font-extrabold shrink-0">
+                  Pin Note
+                </button>
+              </form>
+              <div id="video-notes-list" class="space-y-1.5 max-h-40 overflow-y-auto pr-1"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right 4 Columns: Clean Up Next Queue -->
+        <aside class="lg:col-span-4 w-full min-w-0 surface-card rounded-3xl p-4 sm:p-5 space-y-3.5 overflow-hidden">
+          <div class="flex items-center justify-between gap-2 px-1">
+            <div class="flex items-center gap-2 min-w-0">
+              <svg class="w-4 h-4 text-[#FF0033] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6" />
+                <line x1="8" y1="12" x2="21" y2="12" />
+                <line x1="8" y1="18" x2="21" y2="18" />
+                <line x1="3" y1="6" x2="3.01" y2="6" />
+                <line x1="3" y1="12" x2="3.01" y2="12" />
+                <line x1="3" y1="18" x2="3.01" y2="18" />
+              </svg>
+              <h2 class="font-display font-extrabold text-xs uppercase tracking-wider text-zinc-500 dark:text-zinc-400 truncate">
+                Up Next
+              </h2>
+            </div>
+            <button onclick="switchTab('saved')" class="text-xs font-extrabold text-[#FF0033] hover:underline shrink-0 flex items-center gap-1">
+              <span>All Folders</span>
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+          <div id="player-queue-list" class="space-y-1.5 max-h-[68vh] overflow-y-auto overflow-x-hidden pr-0.5"></div>
+        </aside>
+
+      </div>
+    </section>
+
+    <!-- ========================================================================
+         TAB 2: SAVED FOLDERS & VIDEO VAULT
+         ======================================================================== -->
+    <section id="view-saved" class="hidden space-y-5 min-w-0 overflow-hidden">
+      <!-- Clean Header & Inline Toolbar -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 min-w-0">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-9 h-9 rounded-2xl bg-[#FF0033]/12 border border-[#FF0033]/25 flex items-center justify-center text-[#FF0033] shrink-0">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+            </svg>
+          </div>
+          <h1 class="font-display font-extrabold text-xl sm:text-2xl tracking-tight text-zinc-950 dark:text-white truncate">
+            Saved Folders
+          </h1>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 min-w-0">
+          <div class="relative flex-1 sm:w-56 min-w-[140px]">
+            <input id="saved-search-input" type="text" oninput="renderSavedView()" placeholder="Search saved..." class="surface-input w-full h-9 pl-8 pr-3 rounded-xl text-xs font-medium" />
+            <svg class="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </div>
+
+          <button onclick="openFolderModal()" class="h-9 px-3 rounded-xl surface-btn text-xs font-extrabold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 shrink-0">
+            <svg class="w-3.5 h-3.5 text-[#FF0033]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 10v6M9 13h6" />
+              <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+            </svg>
+            <span>Folder</span>
+          </button>
+
+          <button onclick="openPlaylistImportModal()" class="h-9 px-3.5 rounded-xl btn-liquid-crimson text-xs font-extrabold flex items-center gap-1.5 shrink-0">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span>Import Playlist</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Horizontal Scrollable Folder Filter Pills -->
+      <div id="folder-pills-bar" class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5 max-w-full"></div>
+
+      <!-- Saved Videos Grid -->
+      <div id="saved-videos-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 min-w-0"></div>
+    </section>
+
+    <!-- ========================================================================
+         TAB 3: WATCH HISTORY & PROGRESS TIMELINE
+         ======================================================================== -->
+    <section id="view-history" class="hidden space-y-5 min-w-0 overflow-hidden">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-9 h-9 rounded-2xl bg-[#FF0033]/12 border border-[#FF0033]/25 flex items-center justify-center text-[#FF0033] shrink-0">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9" />
+              <polyline points="12 7 12 12 15 14" />
+            </svg>
+          </div>
+          <h1 class="font-display font-extrabold text-xl sm:text-2xl tracking-tight text-zinc-950 dark:text-white truncate">
+            Watch History
+          </h1>
+        </div>
+
+        <div class="flex items-center gap-2 min-w-0">
+          <div class="relative flex-1 sm:w-56 min-w-0">
+            <input id="history-search-input" type="text" oninput="renderHistoryView()" placeholder="Filter history..." class="surface-input w-full h-9 pl-8 pr-3 rounded-xl text-xs font-medium" />
+            <svg class="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </div>
+
+          <button onclick="confirmClearHistory()" class="h-9 px-3 rounded-xl surface-btn text-xs font-extrabold text-zinc-600 dark:text-zinc-400 hover:text-[#FF0033] flex items-center gap-1.5 shrink-0">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14Z" />
+            </svg>
+            <span>Clear</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="history-list-container" class="space-y-6 min-w-0"></div>
+    </section>
+
+    <!-- ========================================================================
+         TAB 2: SAVED FOLDERS & VIDEO VAULT
+         ======================================================================== -->
+    <section id="view-saved" class="hidden space-y-5 min-w-0">
+      <!-- Clean Header & Inline Toolbar -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <h1 class="font-display font-extrabold text-2xl tracking-tight text-zinc-950 dark:text-white">
+          Saved Folders
+        </h1>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="relative flex-1 sm:w-56 min-w-[160px]">
+            <input id="saved-search-input" type="text" oninput="renderSavedView()" placeholder="Search saved..." class="surface-input w-full h-9 pl-8 pr-3 rounded-xl text-xs font-medium" />
+            <svg class="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </div>
+
+          <button onclick="openFolderModal()" class="h-9 px-3 rounded-xl surface-btn text-xs font-extrabold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 shrink-0">
+            <span class="text-[#FF0033]">+</span>
+            <span>Folder</span>
+          </button>
+
+          <button onclick="openPlaylistImportModal()" class="h-9 px-3.5 rounded-xl btn-liquid-crimson text-xs font-extrabold flex items-center gap-1.5 shrink-0">
+            <span>Import Playlist</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Horizontal Scrollable Folder Filter Pills -->
+      <div id="folder-pills-bar" class="flex items-center gap-2 overflow-x-auto no-scrollbar"></div>
+
+      <!-- Saved Videos Grid -->
+      <div id="saved-videos-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+    </section>
+
+    <!-- ========================================================================
+         TAB 3: WATCH HISTORY & PROGRESS TIMELINE
+         ======================================================================== -->
+    <section id="view-history" class="hidden space-y-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <h1 class="font-display font-extrabold text-2xl tracking-tight text-zinc-950 dark:text-white">
+          Watch History
+        </h1>
+
+        <div class="flex items-center gap-2">
+          <div class="relative flex-1 sm:w-56">
+            <input id="history-search-input" type="text" oninput="renderHistoryView()" placeholder="Filter history..." class="surface-input w-full h-9 pl-8 pr-3 rounded-xl text-xs font-medium" />
+            <svg class="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </div>
+
+          <button onclick="confirmClearHistory()" class="h-9 px-3 rounded-xl surface-btn text-xs font-extrabold text-zinc-600 dark:text-zinc-400 hover:text-[#FF0033] shrink-0">
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <div id="history-list-container" class="space-y-6"></div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MOBILE FLOATING LIQUID GLASS BOTTOM DOCK ==================== -->
+  <nav aria-label="Mobile Navigation" class="md:hidden fixed z-30 chrome-mobile-dock left-3 right-3 bottom-3">
+    <div id="mob-nav-container" class="relative grid grid-cols-3 p-1.5 rounded-2xl glass-dock">
+      <div id="mob-nav-pill" class="tab-pill-indicator"></div>
+
+      <button id="mob-tab-player" onclick="switchTab('player')" class="relative z-10 flex flex-col items-center justify-center py-2 rounded-xl text-[11px] font-extrabold tracking-[-0.01em] transition-colors text-white">
+        <svg class="w-[18px] h-[18px] mb-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9.25" />
+          <path d="M10.25 8.75L15.5 12L10.25 15.25V8.75Z" fill="currentColor" stroke="none" />
+        </svg>
+        <span>Player</span>
+      </button>
+
+      <button id="mob-tab-saved" onclick="switchTab('saved')" class="relative z-10 flex flex-col items-center justify-center py-2 rounded-xl text-[11px] font-extrabold tracking-[-0.01em] transition-colors text-zinc-700 dark:text-zinc-300">
+        <svg class="w-[18px] h-[18px] mb-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3.75 7.5A2.75 2.75 0 016.5 4.75h3.1c.73 0 1.43.29 1.94.81l.92.94c.51.52 1.21.81 1.94.81h3.1a2.75 2.75 0 012.75 2.75v6.44a2.75 2.75 0 01-2.75 2.75H6.5a2.75 2.75 0 01-2.75-2.75V7.5z" />
+          <path d="M8.5 13.25h7" stroke-opacity="0.7" />
+        </svg>
+        <span>Saved</span>
+      </button>
+
+      <button id="mob-tab-history" onclick="switchTab('history')" class="relative z-10 flex flex-col items-center justify-center py-2 rounded-xl text-[11px] font-extrabold tracking-[-0.01em] transition-colors text-zinc-700 dark:text-zinc-300">
+        <svg class="w-[18px] h-[18px] mb-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3.5 12a8.5 8.5 0 1 0 2.49-6.01L3.5 8.5" />
+          <path d="M3.5 3.75v4.75h4.75" />
+          <path d="M12 7.75v4.5l3 1.75" />
+        </svg>
+        <span>History</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ==================== MODAL: ADD & SAVE YOUTUBE VIDEO ==================== -->
+  <div id="add-video-modal" onclick="if(event.target === this) closeAddModal()" class="hidden animate-backdrop fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-5 bg-black/60 backdrop-blur-md">
+    <div class="glass-modal-panel animate-modal w-full max-w-lg rounded-3xl p-5 sm:p-6 space-y-5 relative max-h-[92dvh] overflow-y-auto">
+      <!-- Clean Modal Header -->
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <h2 class="font-display font-extrabold text-lg sm:text-xl tracking-tight text-zinc-950 dark:text-white">
+            Add YouTube Video
+          </h2>
+          <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">
+            Save any video link to a folder or play immediately in-app
+          </p>
+        </div>
+        <button type="button" onclick="closeAddModal()" aria-label="Close" class="w-8 h-8 rounded-xl surface-btn flex items-center justify-center text-zinc-500 hover:text-zinc-950 dark:hover:text-white shrink-0">
+          ✕
+        </button>
+      </div>
+
+      <!-- Quick Handoff Bar to Bulk Playlist Importer -->
+      <div class="p-3 rounded-2xl surface-subtle flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          <p class="text-xs font-extrabold text-zinc-900 dark:text-white">Importing a full playlist?</p>
+          <p class="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 truncate">Load all videos from a YouTube playlist at once</p>
+        </div>
+        <button type="button" onclick="closeAddModal(); openPlaylistImportModal();" class="px-3 py-1.5 rounded-xl bg-[#FF0033]/12 hover:bg-[#FF0033] text-[#FF0033] hover:text-white text-xs font-extrabold transition-colors shrink-0">
+          Bulk Import →
+        </button>
+      </div>
+
+      <form onsubmit="handleSaveVideoSubmit(event)" class="space-y-4">
+        <!-- YouTube URL Input -->
+        <div class="space-y-1.5">
+          <label class="block text-[11px] font-extrabold uppercase tracking-wider text-zinc-500">YouTube Link or Video ID</label>
+          <div class="flex items-center gap-2">
+            <input id="input-yt-url" type="text" required oninput="handleUrlInputChange(this.value)" placeholder="https://www.youtube.com/watch?v=..." class="surface-input flex-1 min-w-0 h-11 px-3.5 rounded-xl text-sm font-medium" />
+            <button type="button" onclick="pasteFromClipboard()" class="h-11 px-3.5 rounded-xl surface-btn text-xs font-extrabold text-zinc-800 dark:text-zinc-200 hover:text-[#FF0033] shrink-0">
+              Paste
+            </button>
+          </div>
+          <p id="url-status-hint" class="text-[11px] font-semibold text-zinc-500">
+            Supports watch, shorts, youtu.be, embed, or 11-char video IDs.
+          </p>
+
+          <!-- Auto-detected Playlist Link Handoff Banner -->
+          <div id="playlist-redirect-banner" class="hidden mt-2 p-3 rounded-2xl bg-[#FF0033]/12 border border-[#FF0033]/30 flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-xs font-extrabold text-[#FF0033]">Playlist Link Detected</p>
+              <p class="text-[11px] font-medium text-zinc-600 dark:text-zinc-300 truncate">Import all videos from this playlist into a folder.</p>
+            </div>
+            <button type="button" onclick="handoffToPlaylistImporter()" class="px-3 py-1.5 rounded-xl btn-liquid-crimson text-xs font-extrabold shrink-0">
+              Import All
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Thumbnail & Title Preview -->
+        <div id="add-preview-box" class="hidden p-3 rounded-2xl surface-subtle flex items-center gap-3">
+          <img id="add-preview-thumb" src="" alt="" class="w-24 aspect-video rounded-xl object-cover bg-zinc-900 shrink-0" />
+          <div class="min-w-0 flex-1">
+            <p id="add-preview-title-display" class="font-display font-extrabold text-xs text-zinc-950 dark:text-white line-clamp-2 leading-snug">
+              Video Preview
+            </p>
+            <p id="add-preview-status" class="text-[11px] font-bold text-[#FF0033] mt-1">
+              Fetching metadata...
+            </p>
+          </div>
+        </div>
+
+        <!-- Title & Channel -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="space-y-1 min-w-0">
+            <label class="block text-[11px] font-extrabold uppercase tracking-wider text-zinc-500">Video Title</label>
+            <input id="input-yt-title" type="text" placeholder="Auto-filled from YouTube" class="surface-input w-full h-10 px-3 rounded-xl text-xs sm:text-sm font-medium" />
+          </div>
+          <div class="space-y-1 min-w-0">
+            <label class="block text-[11px] font-extrabold uppercase tracking-wider text-zinc-500">Channel Name</label>
+            <input id="input-yt-channel" type="text" placeholder="Channel or Creator" class="surface-input w-full h-10 px-3 rounded-xl text-xs sm:text-sm font-medium" />
+          </div>
+        </div>
+
+        <!-- Save to Folder Selection -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <label class="text-[11px] font-extrabold uppercase tracking-wider text-zinc-500">Save to Folder</label>
+            <button type="button" onclick="toggleInlineFolderCreate()" class="text-[11px] font-extrabold text-[#FF0033] hover:underline">
+              + Create New Folder
+            </button>
+          </div>
+          <select id="select-yt-folder" class="surface-input w-full h-10 px-3 rounded-xl text-xs sm:text-sm font-bold"></select>
+
+          <!-- Inline New Folder Creator -->
+          <div id="inline-folder-creator" class="hidden flex items-center gap-2 pt-1.5">
+            <input id="inline-new-folder-name" type="text" placeholder="New folder name..." class="surface-input flex-1 min-w-0 h-9 px-3 rounded-xl text-xs font-medium" />
+            <button type="button" onclick="createInlineFolder()" class="h-9 px-3.5 rounded-xl btn-liquid-crimson text-xs font-extrabold shrink-0">
+              Create
+            </button>
+          </div>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div class="pt-2 grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2 border-t border-black/[0.06] dark:border-white/[0.08]">
+          <button type="submit" value="save" class="h-10 px-4 rounded-xl surface-btn text-xs font-extrabold text-zinc-900 dark:text-white">
+            Save Only
+          </button>
+          <button type="submit" value="play" class="h-10 px-5 rounded-xl btn-liquid-crimson text-xs font-extrabold">
+            Save & Play
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: CREATE NEW FOLDER ==================== -->
+  <div id="folder-modal" onclick="if(event.target === this) closeFolderModal()" class="hidden animate-backdrop fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-5 bg-black/60 backdrop-blur-md">
+    <div class="glass-modal-panel animate-modal w-full max-w-md rounded-3xl p-5 sm:p-6 space-y-5">
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="font-display font-extrabold text-lg tracking-tight text-zinc-950 dark:text-white">
+          Create Saved Folder
+        </h2>
+        <button type="button" onclick="closeFolderModal()" class="w-8 h-8 rounded-xl surface-btn flex items-center justify-center text-zinc-500 hover:text-zinc-950 dark:hover:text-white shrink-0">
+          ✕
+        </button>
+      </div>
+
+      <form onsubmit="handleCreateFolderSubmit(event)" class="space-y-4">
+        <div class="space-y-1.5">
+          <label class="block text-xs font-extrabold uppercase tracking-wider text-zinc-500">Folder Name</label>
+          <input id="modal-folder-name" type="text" required placeholder="e.g., Coding Tutorials, Music Mixes..." class="surface-input w-full h-11 px-3.5 rounded-xl text-sm font-medium" />
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="block text-xs font-extrabold uppercase tracking-wider text-zinc-500">Accent Tag Color</label>
+          <div id="folder-color-swatches" class="flex items-center gap-2.5">
+            <button type="button" data-color="#FF0033" onclick="selectFolderColor('#FF0033')" class="w-7 h-7 rounded-full ring-2 ring-offset-2 ring-[#FF0033] dark:ring-offset-zinc-950" style="background:#FF0033"></button>
+            <button type="button" data-color="#3B82F6" onclick="selectFolderColor('#3B82F6')" class="w-7 h-7 rounded-full opacity-75 hover:opacity-100" style="background:#3B82F6"></button>
+            <button type="button" data-color="#10B981" onclick="selectFolderColor('#10B981')" class="w-7 h-7 rounded-full opacity-75 hover:opacity-100" style="background:#10B981"></button>
+            <button type="button" data-color="#F59E0B" onclick="selectFolderColor('#F59E0B')" class="w-7 h-7 rounded-full opacity-75 hover:opacity-100" style="background:#F59E0B"></button>
+            <button type="button" data-color="#8B5CF6" onclick="selectFolderColor('#8B5CF6')" class="w-7 h-7 rounded-full opacity-75 hover:opacity-100" style="background:#8B5CF6"></button>
+          </div>
+        </div>
+
+        <div class="pt-2 grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2 border-t border-black/[0.06] dark:border-white/[0.08]">
+          <button type="button" onclick="closeFolderModal()" class="h-10 px-4 rounded-xl surface-btn text-xs font-extrabold text-zinc-600 dark:text-zinc-300">
+            Cancel
+          </button>
+          <button type="submit" class="h-10 px-5 rounded-xl btn-liquid-crimson text-xs font-extrabold">
+            Create Folder
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: PLAYLIST LINK BULK IMPORT ==================== -->
+  <div id="playlist-import-modal" onclick="if(event.target === this) closePlaylistImportModal()" class="hidden animate-backdrop fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-5 bg-black/65 backdrop-blur-md">
+    <div class="glass-modal-panel animate-modal w-full max-w-2xl rounded-3xl p-5 sm:p-6 space-y-4 relative max-h-[90dvh] flex flex-col">
+      <!-- Modal Header -->
+      <div class="flex items-start justify-between gap-3 shrink-0">
+        <div class="min-w-0">
+          <h2 class="font-display font-extrabold text-lg sm:text-xl tracking-tight text-zinc-950 dark:text-white">
+            Bulk Import YouTube Playlist
+          </h2>
+          <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">
+            Import any Public or Unlisted playlist link or paste multiple video URLs
+          </p>
+        </div>
+        <button type="button" onclick="closePlaylistImportModal()" aria-label="Close" class="w-8 h-8 rounded-xl surface-btn flex items-center justify-center text-zinc-500 hover:text-zinc-950 dark:hover:text-white shrink-0">
+          ✕
+        </button>
+      </div>
+
+      <!-- Segmented Mode Switcher: Playlist URL vs Multi-Link Paste -->
+      <div class="grid grid-cols-2 sm:inline-flex p-1 rounded-2xl surface-subtle gap-1 shrink-0 sm:self-start">
+        <button type="button" id="import-mode-url-btn" onclick="switchPlaylistImportMode('url')" class="px-3.5 py-1.5 rounded-xl btn-liquid-crimson text-xs font-extrabold transition-all">
+          Playlist Link
+        </button>
+        <button type="button" id="import-mode-multi-btn" onclick="switchPlaylistImportMode('multi')" class="px-3.5 py-1.5 rounded-xl text-xs font-extrabold text-zinc-700 dark:text-zinc-300 transition-all">
+          Paste Multiple Links
+        </button>
+      </div>
+
+      <!-- Mode 1: Playlist URL Input -->
+      <div id="import-panel-url" class="space-y-2 shrink-0">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <input id="input-playlist-url" type="text" placeholder="https://www.youtube.com/playlist?list=PL..." class="surface-input flex-1 min-w-0 h-11 px-3.5 rounded-xl text-sm font-medium" />
+          <div class="grid grid-cols-2 sm:flex items-center gap-2 shrink-0">
+            <button type="button" onclick="pastePlaylistUrlFromClipboard()" class="h-11 px-3.5 rounded-xl surface-btn text-xs font-extrabold text-zinc-800 dark:text-zinc-200 hover:text-[#FF0033]">
+              Paste
+            </button>
+            <button type="button" id="btn-fetch-playlist" onclick="fetchPlaylistVideos()" class="h-11 px-4 rounded-xl btn-liquid-crimson text-xs font-extrabold">
+              Load Videos
+            </button>
+          </div>
+        </div>
+        <p id="playlist-fetch-status" class="text-[11px] font-semibold text-zinc-500 leading-relaxed">
+          Tip: Set "Watch Later" or private playlists to Unlisted in YouTube to import via link.
+        </p>
+      </div>
+
+      <!-- Mode 2: Multi-Link Bulk Paste -->
+      <div id="import-panel-multi" class="hidden space-y-2.5 shrink-0">
+        <textarea id="input-multi-links" rows="3" placeholder="Paste multiple YouTube links (one per line or copied list)..." class="surface-input w-full p-3.5 rounded-xl text-xs sm:text-sm font-medium resize-none"></textarea>
+        <div class="flex items-center justify-end gap-2">
+          <button type="button" onclick="pasteMultiLinksFromClipboard()" class="h-9 px-3.5 rounded-xl surface-btn text-xs font-extrabold text-zinc-800 dark:text-zinc-200 hover:text-[#FF0033]">
+            Paste Clipboard
+          </button>
+          <button type="button" onclick="parseMultiLinksIntoChecklist()" class="h-9 px-4 rounded-xl btn-liquid-crimson text-xs font-extrabold">
+            Extract Videos
+          </button>
+        </div>
+      </div>
+
+      <!-- Fetched Playlist Folder Destination & Video Checklist -->
+      <div id="playlist-results-section" class="hidden flex-1 min-h-0 flex flex-col space-y-3 pt-3 border-t border-black/[0.08] dark:border-white/[0.10]">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 shrink-0">
+          <div class="space-y-1 min-w-0">
+            <label class="block text-[11px] font-extrabold uppercase tracking-wider text-zinc-500">Destination Folder</label>
+            <select id="playlist-target-folder-mode" onchange="togglePlaylistNewFolderInput()" class="surface-input w-full h-10 px-3 rounded-xl text-xs font-bold">
+              <option value="new">+ Create New Folder from Playlist</option>
+            </select>
+          </div>
+          <div id="playlist-new-folder-wrap" class="space-y-1 min-w-0">
+            <label class="block text-[11px] font-extrabold uppercase tracking-wider text-zinc-500">New Folder Name</label>
+            <input id="playlist-new-folder-name" type="text" placeholder="Imported Playlist" class="surface-input w-full h-10 px-3 rounded-xl text-xs font-bold" />
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-xs shrink-0 px-0.5">
+          <span id="playlist-selection-summary" class="font-extrabold text-zinc-900 dark:text-white tabular-nums">0 videos selected</span>
+          <div class="flex items-center gap-3">
+            <button type="button" onclick="toggleAllPlaylistCheckboxes(true)" class="font-extrabold text-[#FF0033] hover:underline">Select All</button>
+            <button type="button" onclick="toggleAllPlaylistCheckboxes(false)" class="font-bold text-zinc-500 hover:underline">Clear</button>
+          </div>
+        </div>
+
+        <div id="playlist-videos-checklist" class="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[140px]"></div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="pt-3 grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2 shrink-0 border-t border-black/[0.08] dark:border-white/[0.10]">
+        <button type="button" onclick="closePlaylistImportModal()" class="h-10 px-4 rounded-xl surface-btn text-xs font-extrabold text-zinc-700 dark:text-zinc-300">
+          Cancel
+        </button>
+        <button type="button" id="btn-confirm-bulk-import" onclick="executePlaylistBulkImport()" disabled class="h-10 px-5 rounded-xl btn-liquid-crimson disabled:opacity-40 text-xs font-extrabold">
+          Import Videos
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: CUSTOM CONFIRMATION ==================== -->
+  <div id="confirm-modal" onclick="if(event.target === this) closeConfirmModal()" class="hidden animate-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+    <div class="glass-modal-panel animate-modal w-full max-w-sm rounded-3xl p-5 sm:p-6 space-y-4">
+      <h3 id="confirm-title" class="font-display font-extrabold text-lg text-zinc-950 dark:text-white">Confirm Action</h3>
+      <p id="confirm-message" class="text-xs font-medium text-zinc-600 dark:text-zinc-300 leading-relaxed">Are you sure?</p>
+      <div class="grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2 pt-2">
+        <button type="button" onclick="closeConfirmModal()" class="h-9 px-4 rounded-xl surface-btn text-xs font-extrabold text-zinc-700 dark:text-zinc-300">
+          Cancel
+        </button>
+        <button type="button" id="confirm-proceed-btn" class="h-9 px-4 rounded-xl btn-liquid-crimson text-xs font-extrabold">
+          Confirm
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== AUTO-CLIPBOARD DETECTION FLOATING CARD ==================== -->
+  <div id="clipboard-banner" class="hidden fixed bottom-20 md:bottom-6 left-3.5 right-3.5 md:left-6 md:right-auto md:w-[400px] z-40">
+    <div class="glass-modal-panel animate-modal rounded-2xl p-3.5 border-[#FF0033]/45 space-y-3">
+      <div class="flex items-start gap-3">
+        <div id="clip-thumb-wrap" class="w-16 h-11 rounded-xl bg-zinc-900 overflow-hidden shrink-0 flex items-center justify-center border border-white/15">
+          <img id="clip-thumb-img" src="" alt="" class="w-full h-full object-cover hidden" />
+          <svg id="clip-playlist-icon" class="w-5 h-5 text-[#FF0033] hidden" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h10M4 18h7m10-4v6m-3-3h6" />
+          </svg>
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center justify-between gap-2">
+            <span id="clip-badge-label" class="text-[10px] font-extrabold uppercase tracking-wider text-[#FF0033]">
+              Copied from YouTube
+            </span>
+            <button onclick="dismissClipboardBanner()" aria-label="Dismiss" class="text-xs text-zinc-400 hover:text-zinc-900 dark:hover:text-white px-1">
+              ✕
+            </button>
+          </div>
+          <p id="clip-video-title" class="font-display font-extrabold text-xs text-zinc-950 dark:text-white line-clamp-1 mt-0.5">
+            YouTube Link Detected
+          </p>
+          <p id="clip-video-channel" class="text-[11px] font-semibold text-zinc-500 truncate">
+            Tap to import directly into TubeVault
+          </p>
+        </div>
+      </div>
+
+      <div id="clip-actions-row" class="flex items-center justify-end gap-2">
+        <button id="clip-secondary-btn" onclick="acceptClipboardCandidate(false)" class="h-8 px-3 rounded-xl surface-btn text-xs font-extrabold text-zinc-800 dark:text-zinc-200">
+          Save
+        </button>
+        <button id="clip-primary-btn" onclick="acceptClipboardCandidate(true)" class="h-8 px-3.5 rounded-xl btn-liquid-crimson text-xs font-extrabold">
+          Save & Play
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== FLOATING GLASS TOAST NOTIFICATION ==================== -->
+  <div id="toast-container" class="fixed bottom-20 md:bottom-6 right-4 left-4 md:left-auto z-50 flex flex-col items-center md:items-end gap-2 pointer-events-none"></div>
+
+  <!-- ==================== YOUTUBE IFRAME PLAYER API ==================== -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+
+  <!-- ==================== APPLICATION STATE & ENGINE ==================== -->
+  <script>
+    const STORAGE_KEYS = {
+      FOLDERS: 'tubevault_folders_v2',
+      VIDEOS: 'tubevault_videos_v2',
+      HISTORY: 'tubevault_history_v2',
+      NOTES: 'tubevault_notes_v2',
+      ACTIVE: 'tubevault_active_v2',
+      THEME: 'tubevault_theme_v1'
+    };
+
+    const DEFAULT_FOLDERS = [
+      { id: 'folder-learning', name: 'Learning & Tech', color: '#FF0033' },
+      { id: 'folder-design', name: 'Design & Craft', color: '#3B82F6' },
+      { id: 'folder-music', name: 'Focus & Audio', color: '#10B981' }
+    ];
+
+    const STARTER_VIDEOS = [
+      {
+        id: 'vid-seed-1',
+        videoId: 'aqz-KE-bpKQ',
+        title: 'Big Buck Bunny 60fps 4K — Blender Open Movie',
+        channel: 'Blender Foundation',
+        folderId: 'folder-design',
+        addedAt: Date.now() - 86400000 * 2
+      },
+      {
+        id: 'vid-seed-2',
+        videoId: 'jfKfPfyJRdk',
+        title: 'lofi hip hop radio 📚 beats to relax/study to',
+        channel: 'Lofi Girl',
+        folderId: 'folder-music',
+        addedAt: Date.now() - 86400000
+      },
+      {
+        id: 'vid-seed-3',
+        videoId: 'LXb3EKWsInQ',
+        title: 'COSTA RICA IN 4K 60fps HDR (Ultra HD)',
+        channel: 'Jacob + Katie Schwarz',
+        folderId: 'folder-learning',
+        addedAt: Date.now() - 3600000 * 5
+      }
+    ];
+
+    let appState = {
+      activeTab: 'player',
+      selectedFolderFilter: 'all',
+      newFolderColor: '#FF0033',
+      folders: [],
+      videos: [],
+      history: [],
+      notes: {},
+      activeVideo: null,
+      inAppLockEnabled: true,
+      isPlaying: false,
+      isMuted: false,
+      playbackRate: 1,
+      currentTime: 0,
+      duration: 0,
+      playlistImportItems: [],
+      clipboardCandidate: null,
+      lastDismissedClipboardUrl: ''
+    };
+
+    let ytPlayer = null;
+    let ytApiReady = false;
+    let progressTimer = null;
+    let lastTapTime = 0;
+    let singleTapTimeout = null;
+    let confirmCallback = null;
+
+    // --------------------------------------------------------------------------
+    // 1. INITIALIZATION & STORAGE PERSISTENCE
+    // --------------------------------------------------------------------------
+    function loadState() {
+      try {
+        const savedFolders = JSON.parse(localStorage.getItem(STORAGE_KEYS.FOLDERS));
+        const savedVideos = JSON.parse(localStorage.getItem(STORAGE_KEYS.VIDEOS));
+        const savedHistory = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY));
+        const savedNotes = JSON.parse(localStorage.getItem(STORAGE_KEYS.NOTES));
+        const savedActive = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVE));
+
+        appState.folders = Array.isArray(savedFolders) && savedFolders.length ? savedFolders : [...DEFAULT_FOLDERS];
+        appState.videos = Array.isArray(savedVideos) ? savedVideos : [...STARTER_VIDEOS];
+        appState.history = Array.isArray(savedHistory) ? savedHistory : [];
+        appState.notes = savedNotes && typeof savedNotes === 'object' ? savedNotes : {};
+        appState.activeVideo = savedActive || appState.videos[0] || null;
+      } catch (err) {
+        appState.folders = [...DEFAULT_FOLDERS];
+        appState.videos = [...STARTER_VIDEOS];
+        appState.history = [];
+        appState.notes = {};
+        appState.activeVideo = appState.videos[0] || null;
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEYS.FOLDERS, JSON.stringify(appState.folders));
+        localStorage.setItem(STORAGE_KEYS.VIDEOS, JSON.stringify(appState.videos));
+        localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(appState.history));
+        localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(appState.notes));
+        localStorage.setItem(STORAGE_KEYS.ACTIVE, JSON.stringify(appState.activeVideo));
+      } catch (err) {
+        console.warn('Storage save skipped:', err);
+      }
+      updateBadges();
+    }
+
+    function initApp() {
+      loadState();
+      syncThemeMeta();
+      updateBadges();
+      setupTouchShieldGestures();
+      renderAllViews();
+      positionTabIndicators(appState.activeTab);
+
+      const handledIncomingShare = handleIncomingShareTarget();
+      initAutoClipboardDetection();
+
+      const confirmBtn = document.getElementById('confirm-proceed-btn');
+      if (confirmBtn) {
+        confirmBtn.addEventListener('click', () => {
+          if (typeof confirmCallback === 'function') confirmCallback();
+          closeConfirmModal();
+        });
+      }
+
+      if (!handledIncomingShare) {
+        if (appState.activeVideo) {
+          const histEntry = appState.history.find(h => h.videoId === appState.activeVideo.videoId);
+          const startAt = histEntry && histEntry.percent < 95 ? histEntry.watchedSeconds : 0;
+          mountInAppVideo(appState.activeVideo, startAt, false);
+        } else {
+          const emptyEl = document.getElementById('player-empty-state');
+          if (emptyEl) emptyEl.classList.remove('hidden');
+        }
+      }
+
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => positionTabIndicators(appState.activeTab));
+      }
+      window.addEventListener('resize', () => positionTabIndicators(appState.activeTab));
+    }
+
+    // Handle incoming shared URLs (?url=..., ?text=..., ?v=..., ?list=...) when hosted live
+    function handleIncomingShareTarget() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const sharedRaw = [
+          params.get('url'),
+          params.get('text'),
+          params.get('v') ? `https://www.youtube.com/watch?v=${params.get('v')}` : '',
+          params.get('list') ? `https://www.youtube.com/playlist?list=${params.get('list')}` : ''
+        ].filter(Boolean).join(' ').trim();
+
+        if (!sharedRaw) return false;
+
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        const playlistId = extractPlaylistId(sharedRaw);
+        const videoId = extractYouTubeId(sharedRaw);
+
+        if (playlistId && (!videoId || /\/playlist\?/i.test(sharedRaw))) {
+          openPlaylistImportModal(`https://www.youtube.com/playlist?list=${playlistId}`, true);
+          showToast('Loading shared YouTube playlist...');
+          return true;
+        }
+
+        if (videoId) {
+          const sharedTitle = (params.get('title') || '').trim();
+          const defaultFolderId = appState.folders[0]?.id || 'folder-learning';
+          const existingIdx = appState.videos.findIndex(v => v.videoId === videoId);
+
+          const videoObj = {
+            id: existingIdx > -1 ? appState.videos[existingIdx].id : 'vid-' + Date.now(),
+            videoId,
+            title: existingIdx > -1 ? appState.videos[existingIdx].title : (sharedTitle || `YouTube Video (${videoId})`),
+            channel: existingIdx > -1 ? appState.videos[existingIdx].channel : 'YouTube',
+            folderId: existingIdx > -1 ? appState.videos[existingIdx].folderId : defaultFolderId,
+            addedAt: Date.now()
+          };
+
+          if (existingIdx > -1) {
+            appState.videos[existingIdx] = videoObj;
+          } else {
+            appState.videos.unshift(videoObj);
+          }
+
+          saveState();
+          renderAllViews();
+          switchTab('player');
+          mountInAppVideo(videoObj, 0, true);
+          showToast('Playing shared YouTube video in-app');
+
+          fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`)
+            .then(r => r.json())
+            .then(data => {
+              if (data && data.title) {
+                videoObj.title = data.title;
+                videoObj.channel = data.author_name || videoObj.channel;
+                saveState();
+                updateActiveVideoMetadataUI();
+                renderAllViews();
+              }
+            })
+            .catch(() => {});
+
+          return true;
+        }
+      } catch (e) {}
+      return false;
+    }
+
+    // --------------------------------------------------------------------------
+    // 2. THEME & STANDALONE HTML DOWNLOAD
+    // --------------------------------------------------------------------------
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      try {
+        localStorage.setItem(STORAGE_KEYS.THEME, isDark ? 'dark' : 'light');
+      } catch (e) {}
+      syncThemeMeta();
+      showToast(isDark ? 'Obsidian Liquid Glass (Dark)' : 'Crystal Liquid Glass (Light)');
+    }
+
+    function syncThemeMeta() {
+      const isDark = document.documentElement.classList.contains('dark');
+      const meta = document.getElementById('meta-theme-color');
+      if (meta) meta.setAttribute('content', isDark ? '#06070A' : '#EEF1F7');
+    }
+
+    // --------------------------------------------------------------------------
+    // 3. TAB NAVIGATION & SLIDING RED PILL INDICATOR
+    // --------------------------------------------------------------------------
+    function switchTab(tabName) {
+      appState.activeTab = tabName;
+
+      ['player', 'saved', 'history'].forEach(name => {
+        const viewEl = document.getElementById(`view-${name}`);
+        if (viewEl) {
+          if (name === tabName) {
+            viewEl.classList.remove('hidden', 'view-enter');
+            void viewEl.offsetWidth;
+            viewEl.classList.add('view-enter');
+          } else {
+            viewEl.classList.add('hidden');
+            viewEl.classList.remove('view-enter');
+          }
+        }
+
+        const deskBtn = document.getElementById(`desk-tab-${name}`);
+        if (deskBtn) {
+          if (name === tabName) {
+            deskBtn.classList.remove('text-zinc-700', 'dark:text-zinc-300');
+            deskBtn.classList.add('text-white');
+          } else {
+            deskBtn.classList.add('text-zinc-700', 'dark:text-zinc-300');
+            deskBtn.classList.remove('text-white');
+          }
+        }
+
+        const mobBtn = document.getElementById(`mob-tab-${name}`);
+        if (mobBtn) {
+          if (name === tabName) {
+            mobBtn.classList.remove('text-zinc-700', 'dark:text-zinc-300');
+            mobBtn.classList.add('text-white');
+          } else {
+            mobBtn.classList.add('text-zinc-700', 'dark:text-zinc-300');
+            mobBtn.classList.remove('text-white');
+          }
+        }
+      });
+
+      requestAnimationFrame(() => positionTabIndicators(tabName));
+
+      if (tabName === 'saved') renderSavedView();
+      if (tabName === 'history') renderHistoryView();
+      if (tabName === 'player') renderPlayerSidebar();
+    }
+
+    function positionTabIndicators(tabName) {
+      const deskBtn = document.getElementById(`desk-tab-${tabName}`);
+      const deskPill = document.getElementById('desk-nav-pill');
+      if (deskBtn && deskPill && deskBtn.offsetWidth > 0) {
+        deskPill.style.width = `${deskBtn.offsetWidth}px`;
+        deskPill.style.transform = `translateX(${deskBtn.offsetLeft}px)`;
+      }
+
+      const mobBtn = document.getElementById(`mob-tab-${tabName}`);
+      const mobPill = document.getElementById('mob-nav-pill');
+      if (mobBtn && mobPill && mobBtn.offsetWidth > 0) {
+        mobPill.style.width = `${mobBtn.offsetWidth}px`;
+        mobPill.style.transform = `translateX(${mobBtn.offsetLeft}px)`;
+      }
+    }
+
+    function updateBadges() {
+      const savedCount = document.getElementById('desk-saved-count');
+      const histCount = document.getElementById('desk-history-count');
+      if (savedCount) savedCount.textContent = appState.videos.length;
+      if (histCount) histCount.textContent = appState.history.length;
+    }
+
+    // --------------------------------------------------------------------------
+    // 4. IN-APP YOUTUBE PLAYER ENGINE (ZERO EXTERNAL APP REDIRECTS)
+    // --------------------------------------------------------------------------
+    window.onYouTubeIframeAPIReady = function () {
+      ytApiReady = true;
+      if (appState.activeVideo && !ytPlayer) {
+        const histEntry = appState.history.find(h => h.videoId === appState.activeVideo.videoId);
+        const startAt = histEntry && histEntry.percent < 95 ? histEntry.watchedSeconds : 0;
+        mountInAppVideo(appState.activeVideo, startAt, false);
+      }
+    };
+
+    function mountInAppVideo(videoObj, startSeconds = 0, autoplay = true) {
+      if (!videoObj || !videoObj.videoId) return;
+
+      appState.activeVideo = videoObj;
+      appState.currentTime = Math.floor(startSeconds || 0);
+      appState.duration = videoObj.duration || 0;
+      appState.isPlaying = autoplay;
+      saveState();
+
+      document.getElementById('player-empty-state').classList.add('hidden');
+      updateActiveVideoMetadataUI();
+      renderVideoNotes();
+      renderPlayerSidebar();
+
+      const host = document.getElementById('yt-iframe-host');
+      const isHttp = window.location.protocol === 'http:' || window.location.protocol === 'https:';
+      const originParam = isHttp ? `&origin=${encodeURIComponent(window.location.origin)}` : '';
+      const startParam = startSeconds > 1 ? `&start=${Math.floor(startSeconds)}` : '';
+      const autoParam = autoplay ? '&autoplay=1' : '&autoplay=0';
+
+      host.innerHTML = `
+        <iframe
+          id="tubevault-yt-iframe"
+          class="w-full h-full border-0"
+          src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoObj.videoId)}?playsinline=1&controls=0&rel=0&modestbranding=1&iv_load_policy=3&fs=0&disablekb=1&enablejsapi=1${autoParam}${startParam}${originParam}"
+          title="${escapeHtml(videoObj.title)}"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+          playsinline="1"
+          webkit-playsinline="1"
+          referrerpolicy="strict-origin-when-cross-origin"
+        ></iframe>
+      `;
+
+      if (ytApiReady && window.YT && window.YT.Player) {
+        try {
+          ytPlayer = new YT.Player('tubevault-yt-iframe', {
+            events: {
+              onReady: (event) => {
+                if (appState.isMuted) event.target.mute();
+                event.target.setPlaybackRate(appState.playbackRate);
+                const d = event.target.getDuration();
+                if (d && d > 0) appState.duration = Math.floor(d);
+                if (autoplay) event.target.playVideo();
+                updateTransportUI();
+              },
+              onStateChange: (event) => {
+                if (event.data === YT.PlayerState.PLAYING) {
+                  appState.isPlaying = true;
+                  const d = ytPlayer.getDuration();
+                  if (d && d > 0) appState.duration = Math.floor(d);
+                } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) {
+                  appState.isPlaying = false;
+                }
+                updateTransportUI();
+              }
+            }
+          });
+        } catch (e) {
+          ytPlayer = null;
+        }
+      }
+
+      recordHistoryProgress(videoObj, appState.currentTime, appState.duration);
+      startWatchProgressLoop();
+      updateTransportUI();
+    }
+
+    function startWatchProgressLoop() {
+      if (progressTimer) clearInterval(progressTimer);
+      progressTimer = setInterval(() => {
+        if (!appState.activeVideo) return;
+
+        let polledTime = appState.currentTime;
+        let polledDuration = appState.duration;
+
+        if (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
+          try {
+            const t = ytPlayer.getCurrentTime();
+            const d = ytPlayer.getDuration();
+            if (typeof t === 'number' && !isNaN(t)) polledTime = Math.floor(t);
+            if (typeof d === 'number' && d > 0) polledDuration = Math.floor(d);
+          } catch (e) {}
+        } else if (appState.isPlaying) {
+          polledTime += 1;
+          if (!polledDuration) polledDuration = 600;
+        }
+
+        appState.currentTime = polledTime;
+        appState.duration = polledDuration;
+        updateTransportUI();
+
+        if (appState.isPlaying || polledTime > 0) {
+          recordHistoryProgress(appState.activeVideo, polledTime, polledDuration);
+        }
+      }, 1000);
+    }
+
+    function togglePlayPause() {
+      if (!appState.activeVideo) return;
+      if (ytPlayer && typeof ytPlayer.getPlayerState === 'function') {
+        try {
+          const state = ytPlayer.getPlayerState();
+          if (state === 1) {
+            ytPlayer.pauseVideo();
+            appState.isPlaying = false;
+          } else {
+            ytPlayer.playVideo();
+            appState.isPlaying = true;
+          }
+        } catch (e) {
+          appState.isPlaying = !appState.isPlaying;
+        }
+      } else {
+        appState.isPlaying = !appState.isPlaying;
+        sendIframeCommand(appState.isPlaying ? 'playVideo' : 'pauseVideo');
+      }
+      updateTransportUI();
+    }
+
+    function seekRelative(deltaSeconds) {
+      if (!appState.activeVideo) return;
+      const maxDur = appState.duration || 3600;
+      const nextTime = Math.max(0, Math.min(maxDur, appState.currentTime + deltaSeconds));
+      seekToSeconds(nextTime);
+    }
+
+    function seekToSeconds(targetSeconds) {
+      if (!appState.activeVideo) return;
+      appState.currentTime = Math.floor(targetSeconds);
+      if (ytPlayer && typeof ytPlayer.seekTo === 'function') {
+        try {
+          ytPlayer.seekTo(appState.currentTime, true);
+        } catch (e) {}
+      } else {
+        sendIframeCommand('seekTo', [appState.currentTime, true]);
+      }
+      updateTransportUI();
+      recordHistoryProgress(appState.activeVideo, appState.currentTime, appState.duration);
+    }
+
+    function sendIframeCommand(func, args = []) {
+      const iframe = document.getElementById('tubevault-yt-iframe');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage(JSON.stringify({
+          event: 'command',
+          func: func,
+          args: args
+        }), '*');
+      }
+    }
+
+    function cyclePlaybackSpeed() {
+      const speeds = [1, 1.25, 1.5, 2, 0.75];
+      const nextIdx = (speeds.indexOf(appState.playbackRate) + 1) % speeds.length;
+      appState.playbackRate = speeds[nextIdx];
+      document.getElementById('btn-playback-speed').textContent = `${appState.playbackRate}x`;
+      if (ytPlayer && typeof ytPlayer.setPlaybackRate === 'function') {
+        try { ytPlayer.setPlaybackRate(appState.playbackRate); } catch (e) {}
+      } else {
+        sendIframeCommand('setPlaybackRate', [appState.playbackRate]);
+      }
+      showToast(`Playback speed: ${appState.playbackRate}x`);
+    }
+
+    function toggleMute() {
+      appState.isMuted = !appState.isMuted;
+      document.getElementById('icon-vol-on').classList.toggle('hidden', appState.isMuted);
+      document.getElementById('icon-vol-off').classList.toggle('hidden', !appState.isMuted);
+
+      if (ytPlayer && typeof ytPlayer.mute === 'function') {
+        try {
+          appState.isMuted ? ytPlayer.mute() : ytPlayer.unMute();
+        } catch (e) {}
+      } else {
+        sendIframeCommand(appState.isMuted ? 'mute' : 'unMute');
+      }
+    }
+
+    function togglePlayerFullscreen() {
+      const stage = document.getElementById('player-stage-wrapper');
+      if (!stage) return;
+      if (!document.fullscreenElement) {
+        stage.requestFullscreen?.().catch(() => {});
+      } else {
+        document.exitFullscreen?.().catch(() => {});
+      }
+    }
+
+    function handleScrubClick(event) {
+      if (!appState.activeVideo) return;
+      const bar = document.getElementById('player-scrubber');
+      const rect = bar.getBoundingClientRect();
+      const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+      const total = appState.duration || 600;
+      seekToSeconds(ratio * total);
+    }
+
+    function handleScrubHover(event) {
+      const bar = document.getElementById('player-scrubber');
+      const tooltip = document.getElementById('scrub-tooltip');
+      const rect = bar.getBoundingClientRect();
+      const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+      const total = appState.duration || 600;
+      tooltip.textContent = formatDuration(Math.floor(ratio * total));
+      tooltip.style.left = `${ratio * 100}%`;
+      tooltip.classList.remove('hidden');
+    }
+
+    function hideScrubTooltip() {
+      document.getElementById('scrub-tooltip').classList.add('hidden');
+    }
+
+    function setupTouchShieldGestures() {
+      const shield = document.getElementById('inapp-touch-shield');
+      if (!shield) return;
+
+      shield.addEventListener('click', (e) => {
+        const now = Date.now();
+        const rect = shield.getBoundingClientRect();
+        const relX = (e.clientX - rect.left) / rect.width;
+
+        if (now - lastTapTime < 280) {
+          clearTimeout(singleTapTimeout);
+          if (relX < 0.4) {
+            seekRelative(-10);
+            triggerSeekBadge('seek-feedback-left');
+          } else if (relX > 0.6) {
+            seekRelative(10);
+            triggerSeekBadge('seek-feedback-right');
+          } else {
+            togglePlayPause();
+          }
+        } else {
+          singleTapTimeout = setTimeout(() => {
+            togglePlayPause();
+            flashCenterTapBadge();
+          }, 260);
+        }
+        lastTapTime = now;
+      });
+    }
+
+    function toggleTouchShield(event) {
+      event.stopPropagation();
+      appState.inAppLockEnabled = !appState.inAppLockEnabled;
+      const shield = document.getElementById('inapp-touch-shield');
+      const dot = document.getElementById('shield-dot');
+      const label = document.getElementById('shield-label');
+
+      shield.classList.toggle('pointer-events-none', !appState.inAppLockEnabled);
+      dot.className = appState.inAppLockEnabled
+        ? 'w-2 h-2 rounded-full bg-[#FF0033] animate-pulse'
+        : 'w-2 h-2 rounded-full bg-zinc-400';
+      label.textContent = appState.inAppLockEnabled ? 'In-App Lock' : 'Direct Frame';
+      showToast(appState.inAppLockEnabled ? 'In-App Lock enabled (blocks external redirects)' : 'Direct iframe interaction enabled');
+    }
+
+    function triggerSeekBadge(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove('animate-seek-badge');
+      void el.offsetWidth;
+      el.classList.add('animate-seek-badge');
+    }
+
+    function flashCenterTapBadge() {
+      const badge = document.getElementById('center-tap-badge');
+      const icon = document.getElementById('center-tap-icon');
+      if (!badge || !icon) return;
+      icon.innerHTML = appState.isPlaying
+        ? '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>'
+        : '<path d="M8 5v14l11-7z" />';
+      badge.style.opacity = '1';
+      setTimeout(() => { badge.style.opacity = '0'; }, 450);
+    }
+
+    function updateTransportUI() {
+      const playIcon = document.getElementById('play-pause-icon');
+      const playLabel = document.getElementById('play-pause-label');
+      if (playIcon && playLabel) {
+        playIcon.innerHTML = appState.isPlaying
+          ? '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>'
+          : '<path d="M8 5v14l11-7z" />';
+        playLabel.textContent = appState.isPlaying ? 'Pause' : 'Play';
+      }
+
+      const curEl = document.getElementById('player-current-time');
+      const totEl = document.getElementById('player-total-time');
+      const fillEl = document.getElementById('player-progress-fill');
+      const pctBadge = document.getElementById('active-video-percent-badge');
+
+      const cur = appState.currentTime || 0;
+      const dur = appState.duration || 0;
+      const pct = dur > 0 ? Math.min(100, Math.round((cur / dur) * 100)) : 0;
+
+      if (curEl) curEl.textContent = formatDuration(cur);
+      if (totEl) totEl.textContent = dur > 0 ? formatDuration(dur) : '--:--';
+      if (fillEl) fillEl.style.width = `${pct}%`;
+      if (pctBadge) pctBadge.textContent = `${pct}% watched`;
+    }
+
+    function updateActiveVideoMetadataUI() {
+      const v = appState.activeVideo;
+      if (!v) return;
+      document.getElementById('active-video-title').textContent = v.title;
+      document.getElementById('active-video-channel').textContent = v.channel || 'YouTube';
+      const folder = appState.folders.find(f => f.id === v.folderId);
+      document.getElementById('active-video-folder-badge').textContent = folder ? folder.name : 'Watch Queue';
+    }
+
+    // --------------------------------------------------------------------------
+    // 5. WATCH HISTORY TRACKING
+    // --------------------------------------------------------------------------
+    function recordHistoryProgress(videoObj, watchedSeconds, totalSeconds) {
+      if (!videoObj || !videoObj.videoId) return;
+      const dur = totalSeconds > 0 ? totalSeconds : 600;
+      const watched = Math.min(dur, Math.max(0, Math.floor(watchedSeconds)));
+      const percent = Math.min(100, Math.round((watched / dur) * 100));
+
+      const existingIdx = appState.history.findIndex(h => h.videoId === videoObj.videoId);
+      const entry = {
+        videoId: videoObj.videoId,
+        title: videoObj.title,
+        channel: videoObj.channel || 'YouTube',
+        watchedSeconds: watched,
+        totalSeconds: dur,
+        percent: percent,
+        watchedAt: Date.now()
+      };
+
+      if (existingIdx > -1) {
+        appState.history.splice(existingIdx, 1);
+      }
+      appState.history.unshift(entry);
+      saveState();
+    }
+
+    // --------------------------------------------------------------------------
+    // 6. TIMESTAMPED VIDEO NOTES
+    // --------------------------------------------------------------------------
+    function toggleNotesDrawer() {
+      const drawer = document.getElementById('video-notes-drawer');
+      if (!drawer) return;
+      const isOpening = drawer.classList.contains('hidden');
+      drawer.classList.toggle('hidden');
+      if (isOpening) {
+        setTimeout(() => document.getElementById('note-input')?.focus(), 50);
+      }
+    }
+
+    function addVideoNote(event) {
+      event.preventDefault();
+      if (!appState.activeVideo) return;
+      const input = document.getElementById('note-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const vidId = appState.activeVideo.videoId;
+      if (!appState.notes[vidId]) appState.notes[vidId] = [];
+
+      appState.notes[vidId].unshift({
+        id: 'note-' + Date.now(),
+        timestamp: appState.currentTime || 0,
+        text: text
+      });
+
+      input.value = '';
+      saveState();
+      renderVideoNotes();
+      showToast(`Pinned note at ${formatDuration(appState.currentTime || 0)}`);
+    }
+
+    function deleteVideoNote(noteId) {
+      if (!appState.activeVideo) return;
+      const vidId = appState.activeVideo.videoId;
+      appState.notes[vidId] = (appState.notes[vidId] || []).filter(n => n.id !== noteId);
+      saveState();
+      renderVideoNotes();
+    }
+
+    function renderVideoNotes() {
+      const listEl = document.getElementById('video-notes-list');
+      const countEl = document.getElementById('notes-count-badge');
+      if (!listEl || !appState.activeVideo) return;
+
+      const notes = appState.notes[appState.activeVideo.videoId] || [];
+      countEl.textContent = `${notes.length}`;
+
+      if (!notes.length) {
+        listEl.innerHTML = `<p class="text-xs text-zinc-500 py-1.5">No notes pinned for this video yet.</p>`;
+        return;
+      }
+
+      listEl.innerHTML = notes.map(n => `
+        <div class="flex items-center justify-between gap-2.5 p-2 rounded-xl surface-subtle">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <button onclick="seekToSeconds(${n.timestamp})" class="px-2 py-0.5 rounded-lg bg-[#FF0033]/15 text-[#FF0033] text-[11px] font-extrabold tabular-nums shrink-0 hover:bg-[#FF0033] hover:text-white transition-colors">
+              ${formatDuration(n.timestamp)}
+            </button>
+            <p class="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">${escapeHtml(n.text)}</p>
+          </div>
+          <button onclick="deleteVideoNote('${n.id}')" class="text-xs text-zinc-400 hover:text-[#FF0033] px-1">✕</button>
+        </div>
+      `).join('');
+    }
+
+    // --------------------------------------------------------------------------
+    // 7. RENDERING: PLAYER QUEUE, SAVED FOLDERS & WATCH HISTORY
+    // --------------------------------------------------------------------------
+    function renderAllViews() {
+      renderPlayerSidebar();
+      renderSavedView();
+      renderHistoryView();
+    }
+
+    function renderPlayerSidebar() {
+      const container = document.getElementById('player-queue-list');
+      if (!container) return;
+
+      if (!appState.videos.length) {
+        container.innerHTML = `<p class="text-xs text-zinc-500 py-4 text-center">No saved videos yet.</p>`;
+        return;
+      }
+
+      container.innerHTML = appState.videos.map((v, idx) => {
+        const isCurrent = appState.activeVideo && appState.activeVideo.videoId === v.videoId;
+        const folder = appState.folders.find(f => f.id === v.folderId);
+        return `
+          <div onclick="playVideoById('${v.videoId}')" class="animate-card-in group w-full min-w-0 flex items-center gap-3 p-2 rounded-2xl cursor-pointer transition-all ${isCurrent ? 'bg-[#FF0033]/12 border border-[#FF0033]/35 shadow-sm' : 'hover:bg-black/[0.03] dark:hover:bg-white/[0.05] border border-transparent'}" style="animation-delay: ${Math.min(idx, 10) * 35}ms">
+            <div class="relative w-24 h-14 rounded-xl overflow-hidden bg-zinc-900 shrink-0">
+              <img src="https://i.ytimg.com/vi/${v.videoId}/mqdefault.jpg" alt="" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+              ${isCurrent ? `<span class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-[#FF0033] text-[9px] font-extrabold text-white uppercase shadow flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-white animate-ping"></span>Live</span>` : ''}
+            </div>
+            <div class="min-w-0 flex-1 overflow-hidden">
+              <h3 class="font-display font-extrabold text-xs text-zinc-950 dark:text-white line-clamp-2 leading-snug break-words">
+                ${escapeHtml(v.title)}
+              </h3>
+              <p class="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
+                ${escapeHtml(v.channel)}${folder ? ` • ${escapeHtml(folder.name)}` : ''}
+              </p>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderSavedView() {
+      const pillsBar = document.getElementById('folder-pills-bar');
+      const grid = document.getElementById('saved-videos-grid');
+      if (!pillsBar || !grid) return;
+
+      const query = (document.getElementById('saved-search-input')?.value || '').toLowerCase().trim();
+
+      const allCount = appState.videos.length;
+      let pillsHtml = `
+        <button onclick="selectFolderFilter('all')" class="px-3.5 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap shrink-0 flex items-center gap-1.5 transition-all ${appState.selectedFolderFilter === 'all' ? 'btn-liquid-crimson' : 'surface-btn text-zinc-800 dark:text-zinc-300'}">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1.5" />
+            <rect x="14" y="3" width="7" height="7" rx="1.5" />
+            <rect x="3" y="14" width="7" height="7" rx="1.5" />
+            <rect x="14" y="14" width="7" height="7" rx="1.5" />
+          </svg>
+          <span>All (${allCount})</span>
+        </button>
+      `;
+
+      appState.folders.forEach(folder => {
+        const count = appState.videos.filter(v => v.folderId === folder.id).length;
+        const active = appState.selectedFolderFilter === folder.id;
+        pillsHtml += `
+          <button onclick="selectFolderFilter('${folder.id}')" class="px-3.5 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap shrink-0 flex items-center gap-2 transition-all ${active ? 'btn-liquid-crimson' : 'surface-btn text-zinc-800 dark:text-zinc-300'}">
+            <span class="w-2 h-2 rounded-full shrink-0" style="background-color: ${active ? '#FFFFFF' : folder.color}"></span>
+            <span class="max-w-[160px] truncate">${escapeHtml(folder.name)}</span>
+            <span class="opacity-75 tabular-nums">(${count})</span>
+          </button>
+        `;
+      });
+      pillsBar.innerHTML = pillsHtml;
+
+      const filtered = appState.videos.filter(v => {
+        const matchesFolder = appState.selectedFolderFilter === 'all' || v.folderId === appState.selectedFolderFilter;
+        const matchesQuery = !query || v.title.toLowerCase().includes(query) || (v.channel || '').toLowerCase().includes(query);
+        return matchesFolder && matchesQuery;
+      });
+
+      if (!filtered.length) {
+        grid.innerHTML = `
+          <div class="col-span-full surface-card rounded-3xl p-10 text-center space-y-2.5">
+            <div class="w-11 h-11 rounded-2xl bg-[#FF0033]/12 border border-[#FF0033]/25 flex items-center justify-center text-[#FF0033] mx-auto">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+              </svg>
+            </div>
+            <p class="font-display font-extrabold text-base text-zinc-950 dark:text-white">No saved videos found</p>
+            <p class="text-xs text-zinc-500">Click "+ Add Video" or "Import Playlist" to populate your folders.</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = filtered.map((v, idx) => {
+        const hist = appState.history.find(h => h.videoId === v.videoId);
+        const pct = hist ? hist.percent : 0;
+
+        return `
+          <article class="surface-card surface-card-interactive animate-card-in rounded-3xl overflow-hidden flex flex-col justify-between group" style="animation-delay: ${Math.min(idx, 12) * 40}ms">
+            <div class="min-w-0">
+              <!-- Clean Thumbnail Stage -->
+              <div onclick="playVideoById('${v.videoId}')" class="relative aspect-video w-full bg-zinc-950 overflow-hidden cursor-pointer">
+                <img src="https://i.ytimg.com/vi/${v.videoId}/hqdefault.jpg" alt="${escapeHtml(v.title)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" loading="lazy" />
+                <div class="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent opacity-70 group-hover:opacity-90 transition-opacity"></div>
+
+                <!-- Center Crimson Liquid Play Disc -->
+                <div class="absolute inset-0 flex items-center justify-center">
+                  <div class="w-12 h-12 rounded-full btn-liquid-crimson flex items-center justify-center scale-95 group-hover:scale-110 transition-transform duration-300 shadow-lg">
+                    <svg class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- Watch Progress Bar Overlay -->
+                ${pct > 0 ? `
+                  <div class="absolute bottom-0 inset-x-0 h-1.5 bg-white/20">
+                    <div class="h-full bg-[#FF0033]" style="width: ${pct}%"></div>
+                  </div>
+                ` : ''}
+              </div>
+
+              <!-- Card Text -->
+              <div class="p-4 space-y-1 min-w-0">
+                <h3 onclick="playVideoById('${v.videoId}')" class="font-display font-extrabold text-sm sm:text-[15px] text-zinc-950 dark:text-white line-clamp-2 leading-snug break-words cursor-pointer hover:text-[#FF0033] transition-colors">
+                  ${escapeHtml(v.title)}
+                </h3>
+                <p class="text-xs font-semibold text-zinc-600 dark:text-zinc-400 truncate">
+                  ${escapeHtml(v.channel || 'YouTube')}
+                </p>
+              </div>
+            </div>
+
+            <!-- Card Footer Actions -->
+            <div class="px-4 pb-4 pt-2.5 flex items-center justify-between gap-2 border-t border-black/[0.06] dark:border-white/[0.08] min-w-0">
+              <button onclick="playVideoById('${v.videoId}')" class="px-3 py-1.5 rounded-xl bg-[#FF0033]/12 hover:bg-[#FF0033] text-[#FF0033] hover:text-white text-xs font-extrabold flex items-center gap-1.5 transition-colors shrink-0">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+                <span>Play</span>
+              </button>
+
+              <div class="flex items-center gap-1.5 shrink-0">
+                <button onclick="shareVideoLink('${v.videoId}', '${escapeAttr(v.title)}')" title="Share Link" class="w-8 h-8 rounded-xl surface-btn flex items-center justify-center text-zinc-700 dark:text-zinc-300 hover:text-[#FF0033]">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                    <polyline points="16 6 12 2 8 6" />
+                    <line x1="12" y1="2" x2="12" y2="15" />
+                  </svg>
+                </button>
+                <button onclick="removeSavedVideo('${v.id}')" title="Remove from Saved" class="w-8 h-8 rounded-xl surface-btn flex items-center justify-center text-zinc-600 dark:text-zinc-400 hover:text-[#FF0033]">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14Z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    function renderHistoryView() {
+      const container = document.getElementById('history-list-container');
+      if (!container) return;
+
+      const query = (document.getElementById('history-search-input')?.value || '').toLowerCase().trim();
+      const items = appState.history.filter(h =>
+        !query || h.title.toLowerCase().includes(query) || (h.channel || '').toLowerCase().includes(query)
+      );
+
+      if (!items.length) {
+        container.innerHTML = `
+          <div class="surface-card rounded-3xl p-10 text-center space-y-2.5">
+            <div class="w-11 h-11 rounded-2xl bg-[#FF0033]/12 border border-[#FF0033]/25 flex items-center justify-center text-[#FF0033] mx-auto">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9" />
+                <polyline points="12 7 12 12 15 14" />
+              </svg>
+            </div>
+            <p class="font-display font-extrabold text-base text-zinc-950 dark:text-white">No watch history yet</p>
+            <p class="text-xs text-zinc-500">Videos you play inside TubeVault appear here with timestamps and progress bars.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const groups = { Today: [], Yesterday: [], Earlier: [] };
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const yesterdayStart = todayStart - 86400000;
+
+      items.forEach(item => {
+        if (item.watchedAt >= todayStart) groups.Today.push(item);
+        else if (item.watchedAt >= yesterdayStart) groups.Yesterday.push(item);
+        else groups.Earlier.push(item);
+      });
+
+      let html = '';
+      Object.entries(groups).forEach(([label, list]) => {
+        if (!list.length) return;
+        html += `
+          <div class="space-y-3 min-w-0">
+            <h2 class="font-display font-extrabold text-xs uppercase tracking-widest text-zinc-500 px-1">
+              ${label}
+            </h2>
+            <div class="space-y-3 min-w-0">
+              ${list.map((item, idx) => `
+                <article class="surface-card surface-card-interactive animate-card-in rounded-3xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3.5 sm:gap-4 overflow-hidden" style="animation-delay: ${Math.min(idx, 12) * 35}ms">
+                  <!-- Thumbnail with Progress Bar -->
+                  <div onclick="resumeFromHistory('${item.videoId}')" class="relative w-full sm:w-44 aspect-video rounded-2xl overflow-hidden bg-zinc-950 shrink-0 cursor-pointer group">
+                    <img src="https://i.ytimg.com/vi/${item.videoId}/mqdefault.jpg" alt="" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                    <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div class="w-9 h-9 rounded-full btn-liquid-crimson flex items-center justify-center">
+                        <svg class="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div class="absolute bottom-0 inset-x-0 h-1.5 bg-white/20">
+                      <div class="h-full bg-[#FF0033]" style="width: ${item.percent}%"></div>
+                    </div>
+                  </div>
+
+                  <!-- Details & Detailed Progress Bar -->
+                  <div class="flex-1 min-w-0 space-y-2 overflow-hidden">
+                    <div class="flex items-start justify-between gap-2 min-w-0">
+                      <h3 onclick="resumeFromHistory('${item.videoId}')" class="font-display font-extrabold text-sm sm:text-base text-zinc-950 dark:text-white line-clamp-2 sm:line-clamp-1 leading-snug break-words cursor-pointer hover:text-[#FF0033] transition-colors min-w-0 flex-1">
+                        ${escapeHtml(item.title)}
+                      </h3>
+                      <button onclick="removeHistoryEntry('${item.videoId}')" title="Remove entry" class="w-7 h-7 rounded-lg surface-btn flex items-center justify-center text-xs text-zinc-400 hover:text-[#FF0033] shrink-0">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                          <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs font-semibold text-zinc-600 dark:text-zinc-400 min-w-0">
+                      <span class="truncate max-w-[180px] sm:max-w-[260px]">${escapeHtml(item.channel)}</span>
+                      <span class="shrink-0">•</span>
+                      <span class="shrink-0">Watched ${formatWatchedTimestamp(item.watchedAt)}</span>
+                    </div>
+
+                    <!-- Detailed Progress Bar -->
+                    <div class="space-y-1 pt-0.5">
+                      <div class="flex items-center justify-between gap-2 text-[11px] font-extrabold tabular-nums">
+                        <span class="text-[#FF0033]">${item.percent}% completed</span>
+                        <span class="text-zinc-500">${formatDuration(item.watchedSeconds)} / ${formatDuration(item.totalSeconds)}</span>
+                      </div>
+                      <div class="h-2 w-full rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+                        <div class="h-full rounded-full bg-gradient-to-r from-[#FF0033] to-[#FF3B63] transition-[width] duration-300" style="width: ${item.percent}%"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Resume Button -->
+                  <div class="flex sm:flex-col items-center justify-end gap-2 shrink-0 pt-1 sm:pt-0">
+                    <button onclick="resumeFromHistory('${item.videoId}')" class="w-full sm:w-auto px-4 py-2 rounded-xl btn-liquid-crimson text-xs font-extrabold flex items-center justify-center gap-1.5">
+                      <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                      <span>${item.percent >= 95 ? 'Watch Again' : 'Resume'}</span>
+                    </button>
+                  </div>
+                </article>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    // --------------------------------------------------------------------------
+    // 8. VIDEO SELECTION, ADD MODAL & OEMBED METADATA FETCHING
+    // --------------------------------------------------------------------------
+    function playVideoById(videoId) {
+      const found = appState.videos.find(v => v.videoId === videoId)
+        || appState.history.find(h => h.videoId === videoId)
+        || { videoId, title: 'YouTube Video', channel: 'YouTube' };
+
+      const histEntry = appState.history.find(h => h.videoId === videoId);
+      const startAt = histEntry && histEntry.percent < 95 ? histEntry.watchedSeconds : 0;
+
+      switchTab('player');
+      mountInAppVideo(found, startAt, true);
+    }
+
+    function resumeFromHistory(videoId) {
+      playVideoById(videoId);
+    }
+
+    function openAddModal() {
+      populateFolderDropdown();
+      document.getElementById('input-yt-url').value = '';
+      document.getElementById('input-yt-title').value = '';
+      document.getElementById('input-yt-channel').value = '';
+      document.getElementById('add-preview-box').classList.add('hidden');
+      document.getElementById('playlist-redirect-banner').classList.add('hidden');
+      document.getElementById('inline-folder-creator').classList.add('hidden');
+      document.getElementById('add-video-modal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('input-yt-url').focus(), 50);
+    }
+
+    function closeAddModal() {
+      document.getElementById('add-video-modal').classList.add('hidden');
+    }
+
+    async function pasteFromClipboard() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          const input = document.getElementById('input-yt-url');
+          input.value = text;
+          handleUrlInputChange(text);
+        }
+      } catch (e) {
+        showToast('Paste the YouTube link into the input field');
+      }
+    }
+
+    function extractYouTubeId(input) {
+      if (!input) return null;
+      const trimmed = input.trim();
+      if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) return trimmed;
+
+      const patterns = [
+        /(?:youtube\.com\/watch\?v=|youtube\.com\/watch\?.+&v=)([a-zA-Z0-9_-]{11})/,
+        /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+        /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+        /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+        /youtube\.com\/live\/([a-zA-Z0-9_-]{11})/
+      ];
+
+      for (const regex of patterns) {
+        const match = trimmed.match(regex);
+        if (match && match[1]) return match[1];
+      }
+      return null;
+    }
+
+    function extractPlaylistId(input) {
+      if (!input) return null;
+      const trimmed = input.trim();
+      const listMatch = trimmed.match(/[?&]list=([a-zA-Z0-9_-]{10,})/);
+      if (listMatch && listMatch[1]) return listMatch[1];
+      if (/^(PL|UU|OLAK5uy_|RD|FL|LL)[a-zA-Z0-9_-]{10,}$/.test(trimmed)) return trimmed;
+      return null;
+    }
+
+    let metadataAbortController = null;
+
+    async function handleUrlInputChange(rawValue) {
+      const playlistId = extractPlaylistId(rawValue);
+      const videoId = extractYouTubeId(rawValue);
+      const previewBox = document.getElementById('add-preview-box');
+      const hint = document.getElementById('url-status-hint');
+      const playlistBanner = document.getElementById('playlist-redirect-banner');
+
+      if (playlistBanner) {
+        playlistBanner.classList.toggle('hidden', !playlistId);
+      }
+
+      if (!videoId) {
+        previewBox.classList.add('hidden');
+        if (playlistId) {
+          hint.textContent = `Detected Playlist ID: ${playlistId}`;
+        } else {
+          hint.textContent = rawValue.trim() ? 'Invalid YouTube link format.' : 'Supports watch, shorts, youtu.be, embed, or 11-char video IDs.';
+        }
+        return;
+      }
+
+      hint.textContent = `Detected Video ID: ${videoId}`;
+      previewBox.classList.remove('hidden');
+      document.getElementById('add-preview-thumb').src = `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+      document.getElementById('add-preview-status').textContent = 'Fetching video details...';
+
+      if (metadataAbortController) metadataAbortController.abort();
+      metadataAbortController = new AbortController();
+
+      try {
+        const oembedUrl = `https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`;
+        const res = await fetch(oembedUrl, { signal: metadataAbortController.signal });
+        const data = await res.json();
+        if (data && data.title) {
+          const titleInput = document.getElementById('input-yt-title');
+          const channelInput = document.getElementById('input-yt-channel');
+          if (!titleInput.value) titleInput.value = data.title;
+          if (!channelInput.value && data.author_name) channelInput.value = data.author_name;
+          document.getElementById('add-preview-title-display').textContent = data.title;
+          document.getElementById('add-preview-status').textContent = 'Metadata loaded';
+        } else {
+          document.getElementById('add-preview-status').textContent = 'Ready to save';
+        }
+      } catch (e) {
+        document.getElementById('add-preview-status').textContent = 'Ready to save';
+      }
+    }
+
+    function handleSaveVideoSubmit(event) {
+      event.preventDefault();
+      const rawUrl = document.getElementById('input-yt-url').value;
+      const videoId = extractYouTubeId(rawUrl);
+
+      if (!videoId) {
+        showToast('Please enter a valid YouTube link or 11-character ID');
+        return;
+      }
+
+      const title = document.getElementById('input-yt-title').value.trim() || `YouTube Video (${videoId})`;
+      const channel = document.getElementById('input-yt-channel').value.trim() || 'YouTube';
+      const folderId = document.getElementById('select-yt-folder').value || appState.folders[0]?.id;
+      const submitAction = event.submitter?.value || 'play';
+
+      const existingIdx = appState.videos.findIndex(v => v.videoId === videoId);
+      const videoObj = {
+        id: existingIdx > -1 ? appState.videos[existingIdx].id : 'vid-' + Date.now(),
+        videoId,
+        title,
+        channel,
+        folderId,
+        addedAt: Date.now()
+      };
+
+      if (existingIdx > -1) {
+        appState.videos[existingIdx] = videoObj;
+      } else {
+        appState.videos.unshift(videoObj);
+      }
+
+      saveState();
+      closeAddModal();
+      renderAllViews();
+
+      if (submitAction === 'play') {
+        switchTab('player');
+        mountInAppVideo(videoObj, 0, true);
+        showToast('Saved & playing in-app');
+      } else {
+        showToast('Video saved to folder');
+      }
+    }
+
+    function saveCurrentVideoToFolder() {
+      if (!appState.activeVideo) return;
+      openAddModal();
+      const urlInput = document.getElementById('input-yt-url');
+      urlInput.value = `https://www.youtube.com/watch?v=${appState.activeVideo.videoId}`;
+      document.getElementById('input-yt-title').value = appState.activeVideo.title;
+      document.getElementById('input-yt-channel').value = appState.activeVideo.channel || '';
+      handleUrlInputChange(urlInput.value);
+    }
+
+    // --------------------------------------------------------------------------
+    // 9. FOLDER MANAGEMENT & SHARING
+    // --------------------------------------------------------------------------
+    function populateFolderDropdown() {
+      const select = document.getElementById('select-yt-folder');
+      if (!select) return;
+      select.innerHTML = appState.folders.map(f =>
+        `<option value="${f.id}">${escapeHtml(f.name)}</option>`
+      ).join('');
+    }
+
+    function toggleInlineFolderCreate() {
+      document.getElementById('inline-folder-creator').classList.toggle('hidden');
+    }
+
+    function createInlineFolder() {
+      const input = document.getElementById('inline-new-folder-name');
+      const name = input.value.trim();
+      if (!name) return;
+      const newFolder = { id: 'folder-' + Date.now(), name, color: '#FF0033' };
+      appState.folders.push(newFolder);
+      saveState();
+      populateFolderDropdown();
+      document.getElementById('select-yt-folder').value = newFolder.id;
+      input.value = '';
+      document.getElementById('inline-folder-creator').classList.add('hidden');
+      showToast(`Folder "${name}" created`);
+    }
+
+    function openFolderModal() {
+      document.getElementById('modal-folder-name').value = '';
+      document.getElementById('folder-modal').classList.remove('hidden');
+    }
+
+    function closeFolderModal() {
+      document.getElementById('folder-modal').classList.add('hidden');
+    }
+
+    function selectFolderColor(hex) {
+      appState.newFolderColor = hex;
+      document.querySelectorAll('#folder-color-swatches button').forEach(btn => {
+        const active = btn.dataset.color === hex;
+        btn.className = active
+          ? 'w-7 h-7 rounded-full ring-2 ring-offset-2 ring-[#FF0033] dark:ring-offset-zinc-950'
+          : 'w-7 h-7 rounded-full opacity-75 hover:opacity-100';
+      });
+    }
+
+    function handleCreateFolderSubmit(event) {
+      event.preventDefault();
+      const name = document.getElementById('modal-folder-name').value.trim();
+      if (!name) return;
+      appState.folders.push({
+        id: 'folder-' + Date.now(),
+        name,
+        color: appState.newFolderColor || '#FF0033'
+      });
+      saveState();
+      closeFolderModal();
+      renderSavedView();
+      showToast(`Created folder "${name}"`);
+    }
+
+    function selectFolderFilter(folderId) {
+      appState.selectedFolderFilter = folderId;
+      renderSavedView();
+    }
+
+    function removeSavedVideo(id) {
+      appState.videos = appState.videos.filter(v => v.id !== id);
+      saveState();
+      renderAllViews();
+      showToast('Removed from saved videos');
+    }
+
+    function removeHistoryEntry(videoId) {
+      appState.history = appState.history.filter(h => h.videoId !== videoId);
+      saveState();
+      renderHistoryView();
+      showToast('Removed from watch history');
+    }
+
+    function confirmClearHistory() {
+      if (!appState.history.length) return;
+      openConfirmModal('Clear Watch History', 'Remove all watched videos and progress records?', () => {
+        appState.history = [];
+        saveState();
+        renderHistoryView();
+        showToast('Watch history cleared');
+      });
+    }
+
+    function shareCurrentVideo() {
+      if (!appState.activeVideo) return;
+      shareVideoLink(appState.activeVideo.videoId, appState.activeVideo.title);
+    }
+
+    async function shareVideoLink(videoId, title) {
+      const shareUrl = `https://youtu.be/${videoId}`;
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: title || 'YouTube Video', url: shareUrl });
+          return;
+        } catch (e) {}
+      }
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        showToast('YouTube link copied to clipboard');
+      } catch (e) {
+        showToast(shareUrl);
+      }
+    }
+
+    // --------------------------------------------------------------------------
+    // 10. AUTO CLIPBOARD DETECTION (YOUTUBE APP -> TUBEVAULT)
+    // --------------------------------------------------------------------------
+    function initAutoClipboardDetection() {
+      window.addEventListener('focus', () => checkClipboardForYouTube(false));
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          setTimeout(() => checkClipboardForYouTube(false), 250);
+        }
+      });
+      setTimeout(() => checkClipboardForYouTube(false), 900);
+    }
+
+    async function checkClipboardForYouTube(isManual = false) {
+      if (!navigator.clipboard || !navigator.clipboard.readText) return;
+      try {
+        const rawText = (await navigator.clipboard.readText() || '').trim();
+        if (!rawText || rawText.length > 500) return;
+
+        if (!isManual && rawText === appState.lastDismissedClipboardUrl) return;
+
+        const playlistId = extractPlaylistId(rawText);
+        const videoId = extractYouTubeId(rawText);
+
+        const looksLikeYouTube = /youtu\.be|youtube\.com/i.test(rawText) || Boolean(playlistId);
+        if (!looksLikeYouTube || (!playlistId && !videoId)) return;
+
+        if (!isManual && !playlistId && appState.activeVideo && appState.activeVideo.videoId === videoId) {
+          return;
+        }
+
+        if (appState.clipboardCandidate && appState.clipboardCandidate.rawUrl === rawText && !document.getElementById('clipboard-banner').classList.contains('hidden')) {
+          return;
+        }
+
+        if (playlistId && (!videoId || /\/playlist\?/i.test(rawText))) {
+          appState.clipboardCandidate = {
+            type: 'playlist',
+            playlistId,
+            rawUrl: rawText,
+            title: `YouTube Playlist (${playlistId.slice(0, 12)}...)`,
+            channel: 'Bulk import all videos into a folder'
+          };
+          renderClipboardBanner();
+        } else if (videoId) {
+          appState.clipboardCandidate = {
+            type: 'video',
+            videoId,
+            rawUrl: rawText,
+            title: `YouTube Video (${videoId})`,
+            channel: 'Fetching video title...'
+          };
+          renderClipboardBanner();
+
+          try {
+            const res = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`);
+            const data = await res.json();
+            if (data && data.title && appState.clipboardCandidate && appState.clipboardCandidate.videoId === videoId) {
+              appState.clipboardCandidate.title = data.title;
+              appState.clipboardCandidate.channel = data.author_name || 'YouTube';
+              renderClipboardBanner();
+            }
+          } catch (e) {}
+        }
+      } catch (err) {
+        // Silent fallback if browser restricts background clipboard access
+      }
+    }
+
+    function renderClipboardBanner() {
+      const c = appState.clipboardCandidate;
+      if (!c) return;
+
+      const banner = document.getElementById('clipboard-banner');
+      const thumbImg = document.getElementById('clip-thumb-img');
+      const playlistIcon = document.getElementById('clip-playlist-icon');
+      const badgeLabel = document.getElementById('clip-badge-label');
+      const titleEl = document.getElementById('clip-video-title');
+      const channelEl = document.getElementById('clip-video-channel');
+      const secBtn = document.getElementById('clip-secondary-btn');
+      const priBtn = document.getElementById('clip-primary-btn');
+
+      titleEl.textContent = c.title;
+      channelEl.textContent = c.channel;
+
+      if (c.type === 'playlist') {
+        badgeLabel.textContent = 'Playlist Copied from YouTube';
+        thumbImg.classList.add('hidden');
+        playlistIcon.classList.remove('hidden');
+        secBtn.classList.add('hidden');
+        priBtn.textContent = 'Import Playlist';
+      } else {
+        badgeLabel.textContent = 'Video Copied from YouTube';
+        thumbImg.src = `https://i.ytimg.com/vi/${c.videoId}/mqdefault.jpg`;
+        thumbImg.classList.remove('hidden');
+        playlistIcon.classList.add('hidden');
+        secBtn.classList.remove('hidden');
+        secBtn.textContent = 'Save';
+        priBtn.textContent = 'Save & Play';
+      }
+
+      banner.classList.remove('hidden');
+    }
+
+    function dismissClipboardBanner() {
+      if (appState.clipboardCandidate) {
+        appState.lastDismissedClipboardUrl = appState.clipboardCandidate.rawUrl;
+      }
+      document.getElementById('clipboard-banner').classList.add('hidden');
+    }
+
+    function acceptClipboardCandidate(autoPlay = true) {
+      const c = appState.clipboardCandidate;
+      if (!c) return;
+
+      appState.lastDismissedClipboardUrl = c.rawUrl;
+      document.getElementById('clipboard-banner').classList.add('hidden');
+
+      if (c.type === 'playlist') {
+        openPlaylistImportModal(c.rawUrl, true);
+        return;
+      }
+
+      const defaultFolderId = appState.folders[0]?.id || 'folder-learning';
+      const existingIdx = appState.videos.findIndex(v => v.videoId === c.videoId);
+      const videoObj = {
+        id: existingIdx > -1 ? appState.videos[existingIdx].id : 'vid-' + Date.now(),
+        videoId: c.videoId,
+        title: c.title,
+        channel: c.channel || 'YouTube',
+        folderId: existingIdx > -1 ? appState.videos[existingIdx].folderId : defaultFolderId,
+        addedAt: Date.now()
+      };
+
+      if (existingIdx > -1) {
+        appState.videos[existingIdx] = videoObj;
+      } else {
+        appState.videos.unshift(videoObj);
+      }
+
+      saveState();
+      renderAllViews();
+
+      if (autoPlay) {
+        switchTab('player');
+        mountInAppVideo(videoObj, 0, true);
+        showToast('Imported & playing in-app');
+      } else {
+        showToast('Saved to your folders');
+      }
+    }
+
+    // --------------------------------------------------------------------------
+    // 11. PLAYLIST LINK BULK IMPORT ENGINE
+    // --------------------------------------------------------------------------
+    function handoffToPlaylistImporter() {
+      const rawUrl = document.getElementById('input-yt-url').value.trim();
+      closeAddModal();
+      openPlaylistImportModal(rawUrl, true);
+    }
+
+    function openPlaylistImportModal(prefillUrl = '', autoFetch = false) {
+      appState.playlistImportItems = [];
+      document.getElementById('input-playlist-url').value = prefillUrl || '';
+      document.getElementById('input-multi-links').value = '';
+      document.getElementById('playlist-results-section').classList.add('hidden');
+      document.getElementById('playlist-videos-checklist').innerHTML = '';
+      document.getElementById('btn-confirm-bulk-import').disabled = true;
+      document.getElementById('playlist-fetch-status').textContent = 'Tip: Set "Watch Later" or private playlists to Unlisted in YouTube to import via link.';
+
+      const folderSelect = document.getElementById('playlist-target-folder-mode');
+      folderSelect.innerHTML = `<option value="new">+ Create New Folder from Playlist</option>` +
+        appState.folders.map(f => `<option value="${f.id}">Existing: ${escapeHtml(f.name)}</option>`).join('');
+      togglePlaylistNewFolderInput();
+
+      switchPlaylistImportMode('url');
+      document.getElementById('playlist-import-modal').classList.remove('hidden');
+
+      if (prefillUrl && autoFetch) {
+        fetchPlaylistVideos();
+      } else {
+        setTimeout(() => document.getElementById('input-playlist-url').focus(), 60);
+      }
+    }
+
+    function closePlaylistImportModal() {
+      document.getElementById('playlist-import-modal').classList.add('hidden');
+    }
+
+    function switchPlaylistImportMode(mode) {
+      const isUrl = mode === 'url';
+      document.getElementById('import-panel-url').classList.toggle('hidden', !isUrl);
+      document.getElementById('import-panel-multi').classList.toggle('hidden', isUrl);
+
+      document.getElementById('import-mode-url-btn').className = isUrl
+        ? 'px-3.5 py-1.5 rounded-xl btn-liquid-crimson text-xs font-extrabold transition-all'
+        : 'px-3.5 py-1.5 rounded-xl text-xs font-extrabold text-zinc-700 dark:text-zinc-300 transition-all';
+
+      document.getElementById('import-mode-multi-btn').className = !isUrl
+        ? 'px-3.5 py-1.5 rounded-xl btn-liquid-crimson text-xs font-extrabold transition-all'
+        : 'px-3.5 py-1.5 rounded-xl text-xs font-extrabold text-zinc-700 dark:text-zinc-300 transition-all';
+    }
+
+    function togglePlaylistNewFolderInput() {
+      const mode = document.getElementById('playlist-target-folder-mode').value;
+      document.getElementById('playlist-new-folder-wrap').classList.toggle('hidden', mode !== 'new');
+    }
+
+    async function pastePlaylistUrlFromClipboard() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          document.getElementById('input-playlist-url').value = text.trim();
+          fetchPlaylistVideos();
+        }
+      } catch (e) {
+        showToast('Paste your YouTube playlist link into the box');
+      }
+    }
+
+    async function pasteMultiLinksFromClipboard() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          const area = document.getElementById('input-multi-links');
+          area.value = area.value ? `${area.value.trim()}\n${text.trim()}` : text.trim();
+          parseMultiLinksIntoChecklist();
+        }
+      } catch (e) {
+        showToast('Paste your YouTube links into the text box');
+      }
+    }
+
+    async function fetchPlaylistVideos() {
+      const rawInput = document.getElementById('input-playlist-url').value.trim();
+      const playlistId = extractPlaylistId(rawInput);
+      const statusEl = document.getElementById('playlist-fetch-status');
+      const fetchBtn = document.getElementById('btn-fetch-playlist');
+
+      if (!playlistId) {
+        statusEl.textContent = 'Please enter a valid YouTube playlist link containing "list=...".';
+        showToast('Invalid playlist URL');
+        return;
+      }
+
+      fetchBtn.disabled = true;
+      fetchBtn.textContent = 'Loading...';
+      statusEl.textContent = `Fetching playlist (${playlistId})...`;
+
+      const collectedMap = new Map();
+      let detectedPlaylistTitle = '';
+
+      // Source 1: Official YouTube Playlist XML Feed via rss2json
+      try {
+        const rssUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${encodeURIComponent(playlistId)}`;
+        const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+        const res = await fetch(apiUrl);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.status === 'ok' && Array.isArray(data.items)) {
+            if (data.feed && data.feed.title) {
+              detectedPlaylistTitle = data.feed.title.replace(/\s*-\s*YouTube$/i, '').trim();
+            }
+            data.items.forEach(item => {
+              const vid = extractYouTubeId(item.link || '') || (item.guid || '').split(':').pop();
+              if (vid && /^[a-zA-Z0-9_-]{11}$/.test(vid)) {
+                collectedMap.set(vid, {
+                  videoId: vid,
+                  title: item.title || `YouTube Video (${vid})`,
+                  channel: item.author || 'YouTube',
+                  selected: true
+                });
+              }
+            });
+          }
+        }
+      } catch (e) {}
+
+      // Source 2: Full Playlist HTML Page Extraction (captures >15 videos up to 100+)
+      try {
+        const targetUrl = `https://www.youtube.com/playlist?list=${encodeURIComponent(playlistId)}`;
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+        const res = await fetch(proxyUrl);
+        if (res.ok) {
+          const payload = await res.json();
+          const html = payload && payload.contents ? payload.contents : '';
+          if (html) {
+            if (!detectedPlaylistTitle) {
+              const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
+              if (titleMatch && titleMatch[1]) {
+                detectedPlaylistTitle = titleMatch[1].replace(/\s*-\s*YouTube$/i, '').trim();
+              }
+            }
+
+            const rendererRegex = /"playlistVideoRenderer":\{"videoId":"([a-zA-Z0-9_-]{11})"[\s\S]*?"title":\{"runs":\[\{"text":"((?:[^"\\]|\\.)*)"\}\]/g;
+            let match;
+            while ((match = rendererRegex.exec(html)) !== null) {
+              const vid = match[1];
+              let decodedTitle = match[2];
+              try {
+                decodedTitle = JSON.parse(`"${match[2]}"`);
+              } catch (e) {}
+
+              if (!collectedMap.has(vid)) {
+                collectedMap.set(vid, {
+                  videoId: vid,
+                  title: decodedTitle || `YouTube Video (${vid})`,
+                  channel: 'YouTube',
+                  selected: true
+                });
+              }
+            }
+          }
+        }
+      } catch (e) {}
+
+      fetchBtn.disabled = false;
+      fetchBtn.textContent = 'Load Videos';
+
+      const items = Array.from(collectedMap.values());
+      if (!items.length) {
+        statusEl.textContent = 'Could not read videos. Ensure the playlist is Public or Unlisted (not Private).';
+        showToast('Playlist is private or unreachable');
+        return;
+      }
+
+      appState.playlistImportItems = items;
+      document.getElementById('playlist-new-folder-name').value = detectedPlaylistTitle || `Playlist (${playlistId.slice(0, 8)})`;
+      statusEl.textContent = `Loaded ${items.length} videos from "${detectedPlaylistTitle || playlistId}".`;
+      renderPlaylistChecklist();
+    }
+
+    function parseMultiLinksIntoChecklist() {
+      const raw = document.getElementById('input-multi-links').value || '';
+      const tokens = raw.split(/[\s,\n]+/).filter(Boolean);
+      const uniqueIds = new Set();
+
+      tokens.forEach(token => {
+        const vid = extractYouTubeId(token);
+        if (vid) uniqueIds.add(vid);
+      });
+
+      if (!uniqueIds.size) {
+        showToast('No valid YouTube video links found in text');
+        return;
+      }
+
+      appState.playlistImportItems = Array.from(uniqueIds).map(vid => ({
+        videoId: vid,
+        title: `YouTube Video (${vid})`,
+        channel: 'YouTube',
+        selected: true
+      }));
+
+      document.getElementById('playlist-new-folder-name').value = `Imported Batch (${appState.playlistImportItems.length})`;
+      renderPlaylistChecklist();
+
+      appState.playlistImportItems.forEach(async (item, idx) => {
+        try {
+          const res = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${item.videoId}`);
+          const data = await res.json();
+          if (data && data.title && appState.playlistImportItems[idx]) {
+            appState.playlistImportItems[idx].title = data.title;
+            appState.playlistImportItems[idx].channel = data.author_name || 'YouTube';
+            renderPlaylistChecklist();
+          }
+        } catch (e) {}
+      });
+    }
+
+    function renderPlaylistChecklist() {
+      const section = document.getElementById('playlist-results-section');
+      const listEl = document.getElementById('playlist-videos-checklist');
+      const summaryEl = document.getElementById('playlist-selection-summary');
+      const importBtn = document.getElementById('btn-confirm-bulk-import');
+
+      section.classList.remove('hidden');
+
+      const selectedCount = appState.playlistImportItems.filter(i => i.selected).length;
+      summaryEl.textContent = `${selectedCount} of ${appState.playlistImportItems.length} videos selected`;
+      importBtn.disabled = selectedCount === 0;
+      importBtn.textContent = `Import ${selectedCount} Video${selectedCount === 1 ? '' : 's'}`;
+
+      listEl.innerHTML = appState.playlistImportItems.map((item, idx) => `
+        <label class="flex items-center gap-3 p-2.5 rounded-2xl surface-subtle cursor-pointer hover:border-[#FF0033]/40 transition-colors">
+          <input type="checkbox" ${item.selected ? 'checked' : ''} onchange="togglePlaylistItemSelection(${idx}, this.checked)" class="w-4 h-4 accent-[#FF0033] rounded shrink-0" />
+          <img src="https://i.ytimg.com/vi/${item.videoId}/mqdefault.jpg" alt="" class="w-20 aspect-video rounded-xl object-cover bg-zinc-900 shrink-0" loading="lazy" />
+          <div class="min-w-0 flex-1">
+            <p class="font-display font-extrabold text-xs text-zinc-950 dark:text-white line-clamp-1">${escapeHtml(item.title)}</p>
+            <p class="text-[11px] font-semibold text-zinc-500 truncate mt-0.5">${escapeHtml(item.channel)}</p>
+          </div>
+        </label>
+      `).join('');
+    }
+
+    function togglePlaylistItemSelection(index, checked) {
+      if (appState.playlistImportItems[index]) {
+        appState.playlistImportItems[index].selected = checked;
+        renderPlaylistChecklist();
+      }
+    }
+
+    function toggleAllPlaylistCheckboxes(selectAll) {
+      appState.playlistImportItems.forEach(item => { item.selected = selectAll; });
+      renderPlaylistChecklist();
+    }
+
+    function executePlaylistBulkImport() {
+      const selectedItems = appState.playlistImportItems.filter(i => i.selected);
+      if (!selectedItems.length) return;
+
+      const folderMode = document.getElementById('playlist-target-folder-mode').value;
+      let targetFolderId = folderMode;
+
+      if (folderMode === 'new') {
+        const folderName = document.getElementById('playlist-new-folder-name').value.trim() || 'Imported Playlist';
+        const palette = ['#FF0033', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'];
+        const color = palette[appState.folders.length % palette.length];
+        const newFolder = {
+          id: 'folder-' + Date.now(),
+          name: folderName,
+          color
+        };
+        appState.folders.push(newFolder);
+        targetFolderId = newFolder.id;
+      }
+
+      let addedCount = 0;
+      selectedItems.slice().reverse().forEach((item, idx) => {
+        const existingIdx = appState.videos.findIndex(v => v.videoId === item.videoId);
+        const videoObj = {
+          id: existingIdx > -1 ? appState.videos[existingIdx].id : `vid-${Date.now()}-${idx}`,
+          videoId: item.videoId,
+          title: item.title,
+          channel: item.channel || 'YouTube',
+          folderId: targetFolderId,
+          addedAt: Date.now() + idx
+        };
+
+        if (existingIdx > -1) {
+          appState.videos[existingIdx] = videoObj;
+        } else {
+          appState.videos.unshift(videoObj);
+          addedCount++;
+        }
+      });
+
+      saveState();
+      closePlaylistImportModal();
+      appState.selectedFolderFilter = targetFolderId;
+      switchTab('saved');
+      showToast(`Imported ${selectedItems.length} videos (${addedCount} new) into folder`);
+
+      selectedItems.forEach(async (item) => {
+        if (!item.title.startsWith('YouTube Video (')) return;
+        try {
+          const res = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${item.videoId}`);
+          const data = await res.json();
+          if (data && data.title) {
+            const target = appState.videos.find(v => v.videoId === item.videoId);
+            if (target) {
+              target.title = data.title;
+              target.channel = data.author_name || target.channel;
+              saveState();
+              if (appState.activeTab === 'saved') renderSavedView();
+            }
+          }
+        } catch (e) {}
+      });
+    }
+
+    // --------------------------------------------------------------------------
+    // 12. CUSTOM CONFIRM MODAL, TOASTS & FORMATTING HELPERS
+    // --------------------------------------------------------------------------
+    function openConfirmModal(title, message, onConfirm) {
+      document.getElementById('confirm-title').textContent = title;
+      document.getElementById('confirm-message').textContent = message;
+      confirmCallback = onConfirm;
+      document.getElementById('confirm-modal').classList.remove('hidden');
+    }
+
+    function closeConfirmModal() {
+      document.getElementById('confirm-modal').classList.add('hidden');
+      confirmCallback = null;
+    }
+
+    function showToast(message) {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const toast = document.createElement('div');
+      toast.className = 'glass-modal-panel px-4 py-2.5 rounded-xl text-xs font-extrabold text-zinc-950 dark:text-white border-[#FF0033]/40 shadow-xl animate-modal pointer-events-auto';
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.25s ease';
+        setTimeout(() => toast.remove(), 260);
+      }, 2600);
+    }
+
+    function formatDuration(sec) {
+      const s = Math.max(0, Math.floor(sec || 0));
+      const hrs = Math.floor(s / 3600);
+      const mins = Math.floor((s % 3600) / 60);
+      const rem = s % 60;
+      if (hrs > 0) {
+        return `${hrs}:${String(mins).padStart(2, '0')}:${String(rem).padStart(2, '0')}`;
+      }
+      return `${mins}:${String(rem).padStart(2, '0')}`;
+    }
+
+    function formatWatchedTimestamp(ts) {
+      const d = new Date(ts);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) +
+        ' · ' +
+        d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function escapeAttr(str) {
+      return String(str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        openAddModal();
+      } else if (e.key === 'Escape') {
+        closeAddModal();
+        closeFolderModal();
+        closePlaylistImportModal();
+        closeConfirmModal();
+      }
+    });
+
+    // Boot Application
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+      initApp();
+    }
+  </script>
+</body>
+</html>
