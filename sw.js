@@ -1,5 +1,5 @@
-/* TubeVault service worker: offline app shell. Bump VERSION to push an update. */
-const VERSION = 'tubevault-v3';
+/* Vaultube service worker: offline app shell. Bump VERSION to push an update. */
+const VERSION = 'vaultube-v8';
 const SHELL = ['./', './index.html', './share.html', './styles.css', './app.js', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
 self.addEventListener('install', e => {

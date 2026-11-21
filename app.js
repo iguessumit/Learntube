@@ -17,7 +17,10 @@
       nsum: 'tv3_nsum',
       subfeed: 'tv3_subfeed'
     };
-    const DEF_TOPICS = ['JEE', 'Physics', 'Maths', 'Chemistry', 'Coding', 'Cybersecurity', 'Lofi', 'Motivation', 'Podcasts', 'Gaming'];
+    const DEF_TOPICS = ['JEE', 'Physics', 'Maths', 'Chemistry', 'Coding', 'AI', 'Finance', 'Cybersecurity', 'Biology', 'Economics'];
+    /* Learning-only guard rails: anything matching BAD (and not clearly a lecture) is never recommended. */
+    const BAD_RX = /\b(lofi|lo-fi|music|song|songs|remix|official video|lyrics|trailer|movie|film|web series|episode|gaming|gameplay|walkthrough|minecraft|gta|comedy|funny|prank|meme|vlog|reaction|asmr|celebrity|bollywood|cricket|ipl|football|news|breaking|live stream|podcast|motivation|motivational|roast|shorts?|tiktok|reels?)\b/i;
+    const GOOD_RX = /\b(lecture|tutorial|course|class|chapter|lesson|explained|learn|learning|how to|crash course|full course|masterclass|jee|neet|physics|chemistry|maths?|math|calculus|algebra|coding|programming|python|javascript|react|dsa|algorithm|machine learning|deep learning|llm|ai|data science|finance|accounting|economics|investing|statistics|biology|cyber|security|linux|engineering|science|history|english|grammar|design|marketing|startup|sql|cloud|devops|electronics)\b/i;
 
     const S = {
       playlists: [],
@@ -228,6 +231,10 @@
     function load() {
       Object.assign(S.set, ld(K.set, {}));
       if (!Array.isArray(S.set.topics) || !S.set.topics.length) S.set.topics = DEF_TOPICS.slice();
+      S.set.topics = S.set.topics.filter(t => !/^(lofi|motivation|podcasts?|gaming|music|movies?|news|shorts|entertainment|comedy|vlogs?)$/i.test(t));
+      if (!S.set.topics.length) S.set.topics = DEF_TOPICS.slice();
+      ['blockV'].forEach(k => { if (!Array.isArray(S.set[k])) S.set[k] = []; });
+      ['blockCh', 'blockCat', 'favCh', 'favCat'].forEach(k => { if (!S.set[k] || typeof S.set[k] !== 'object') S.set[k] = {}; });
       const pl = ld(K.pl, null);
       if (!pl) {
         S.playlists = SYS.map(x => ({ ...x, items: [] }));
@@ -270,10 +277,11 @@
       mt = setTimeout(() => sv(K.meta, S.meta), 500);
     }
 
+    const cleanTitle = t => String(t || '').replace(/[\p{Extended_Pictographic}\uFE0F\u200D\u20E3]/gu, '').replace(/(?:\s*#[\w-]+)+\s*$/g, '').replace(/\s{2,}/g, ' ').replace(/^[\s|•·\-–—]+|[\s|•·\-–—]+$/g, '').trim();
     const M = id => {
       const m = S.meta[id] || {};
       return {
-        title: m.title || 'YouTube Video',
+        title: cleanTitle(m.title) || (m.title ? String(m.title).slice(0, 90) : 'YouTube Video'),
         channel: m.channel || 'YouTube',
         cid: m.cid || CID[m.channel] || '',
         dur: m.dur || 0,
@@ -310,7 +318,10 @@
       if (/\b(chemistry|organic|inorganic|mole|reaction|periodic)\b/.test(t)) return 'Chemistry';
       if (/\b(code|coding|programming|javascript|python|react|java|dsa|algorithm|web dev)\b/.test(t)) return 'Coding';
       if (/\b(cyber|security|hacking|linux|network|pentest|ctf)\b/.test(t)) return 'Cybersecurity';
-      if (/\b(lofi|music|beats|study music)\b/.test(t)) return 'Lofi';
+      if (/\b(ai|artificial intelligence|machine learning|deep learning|llm|neural|chatgpt|gpt|data science)\b/.test(t)) return 'AI';
+      if (/\b(finance|stock|stocks|invest|investing|accounting|trading|mutual fund|banking)\b/.test(t)) return 'Finance';
+      if (/\b(economics|economy|macro|micro economics)\b/.test(t)) return 'Economics';
+      if (/\b(biology|botany|zoology|genetics|anatomy|cell)\b/.test(t)) return 'Biology';
       return S.chip !== 'All' ? S.chip : 'General';
     }
 
@@ -325,7 +336,7 @@
       chemistry: ['FSyAehMdpyI'],
       coding: ['PkZNo7MFNFg', 'rfscVS0vtbw']
     };
-    const ACAD = ['jee', 'physics', 'maths', 'chemistry', 'coding', 'cybersecurity', 'biology', 'neet', 'science', 'history', 'economics', 'english', 'programming', 'math', 'dsa', 'python', 'javascript'];
+    const ACAD = ['ai', 'finance', 'jee', 'physics', 'maths', 'chemistry', 'coding', 'cybersecurity', 'biology', 'neet', 'science', 'history', 'economics', 'english', 'programming', 'math', 'dsa', 'python', 'javascript'];
     function starterFor(key) {
       const out = [];
       Object.keys(STARTER).forEach(k => { if (key.includes(k)) STARTER[k].forEach(id => out.push({ id, title: '', channel: '', dur: 0, views: '', pub: '', desc: '' })); });
@@ -445,9 +456,26 @@
       return r;
     }
 
+    /* ---- Shorts never exist here ---- */
+    const isShortItem = x => !!x && ((x.dur > 0 && x.dur <= 75) || (x.lengthSeconds > 0 && x.lengthSeconds <= 75) || /#shorts?\b|\bshorts?\b/i.test(x.title || '') || x.short === true);
+    const isShort = id => { const m = S.meta[id]; return !!m && ((m.dur > 0 && m.dur <= 75) || /#shorts?\b|\byoutube shorts?\b/i.test(m.title || '')); };
+    const isLearning = id => {
+      const m = M(id), t = m.title + ' ' + m.channel;
+      if (BAD_RX.test(t) && !/\b(lecture|tutorial|course|class|chapter|lesson|jee|neet)\b/i.test(t)) return false;
+      return !/^(lofi|gaming|podcasts|music|motivation|entertainment|vlog|comedy)$/i.test(m.cat);
+    };
+    const isBlocked = id => {
+      const set = S.set, m = M(id);
+      if ((set.blockV || []).includes(id)) return true;
+      if ((set.blockCh[m.channel] || 0) >= 1) return true;
+      if ((set.blockCat[m.cat] || 0) >= 3) return true;
+      return false;
+    };
+    const okForFeed = id => !isShort(id) && !isBlocked(id) && isLearning(id);
+
     function ingest(list, catHint) {
       return list
-        .filter(x => /^[\w-]{11}$/.test(x.id))
+        .filter(x => /^[\w-]{11}$/.test(x.id) && !isShortItem(x))
         .map(x => {
           const o = { cat: catHint || undefined };
           ['title', 'channel', 'cid', 'dur', 'views', 'pub', 'ts', 'desc'].forEach(k => { if (x[k]) o[k] = x[k]; });
@@ -633,7 +661,7 @@
       if (!s) return null;
       s = s.trim();
       if (/^[\w-]{11}$/.test(s)) return s;
-      const r = [/[?&]v=([\w-]{11})/, /youtu\.be\/([\w-]{11})/, /youtube\.com\/(?:shorts|embed|live)\/([\w-]{11})/];
+      const r = [/[?&]v=([\w-]{11})/, /youtu\.be\/([\w-]{11})/, /youtube\.com\/(?:embed|live)\/([\w-]{11})/];
       for (const x of r) { const m = s.match(x); if (m) return m[1]; }
       return null;
     }
@@ -980,7 +1008,7 @@
 
     /* ==================== HOME & SMART RECOMMENDATIONS ==================== */
     let homeTok = 0;
-    const learnCat = c => !['general', 'lofi', 'gaming', 'podcasts', 'music', 'motivation', 'entertainment', 'vlog', 'comedy'].includes(String(c || '').toLowerCase());
+    const learnCat = c => !['general', 'lofi', 'gaming', 'podcasts', 'music', 'motivation', 'entertainment', 'vlog', 'comedy', 'news', 'movies'].includes(String(c || '').toLowerCase());
     const chipQuery = c => (ACAD.includes(String(c).toLowerCase()) ? `${c} lecture` : c);
     const jit = id => (hue(id) / 360) * 0.4;
     const isDone = h => !!h && pctOf(h) >= 90;
@@ -999,11 +1027,15 @@
       Object.keys(S.notes).forEach(id => { const m = M(id), n = Math.min(2, (S.notes[id] || []).length * 0.3); add(cat, m.cat, n); add(ch, m.channel, n); });
       S.subs.forEach(c => add(ch, c, 2.5));
       Object.entries(S.set.hits || {}).forEach(([c, n]) => add(cat, c, Math.min(3, n * 0.4)));
+      Object.entries(S.set.favCat || {}).forEach(([c, n]) => add(cat, c, Math.min(6, n * 2)));
+      Object.entries(S.set.favCh || {}).forEach(([c, n]) => add(ch, c, Math.min(6, n * 2)));
+      Object.keys(cat).forEach(c => { if (!learnCat(c) || (S.set.blockCat[c] || 0) >= 3) delete cat[c]; });
+      Object.keys(ch).forEach(c => { if ((S.set.blockCh[c] || 0) >= 1) delete ch[c]; });
       return { cat, ch };
     }
     function scoreVideo(id, pf, hm) {
       const m = M(id), h = hm[id];
-      let sc = (pf.cat[m.cat] || 0) + (pf.ch[m.channel] || 0) * 1.3;
+      let sc = (pf.cat[m.cat] || 0) + (pf.ch[m.channel] || 0) * 1.3 - (S.set.blockCat[m.cat] || 0) * 3;
       if (h) { const p = pctOf(h); if (p >= 90) sc -= 6; else if (p > 0) sc += 2; }
       if (m.ts) sc += Math.max(0, 1.2 - (Date.now() - m.ts) / 864e5 / 400);
       if (!S.meta[id] || !S.meta[id].title) sc -= 1;
@@ -1011,7 +1043,7 @@
     }
     function rankIds(ids, limit) {
       const pf = profile(), hm = histMap();
-      const sc = [...new Set(ids)].map(id => [id, scoreVideo(id, pf, hm)]).sort((a, b) => b[1] - a[1]);
+      const sc = [...new Set(ids)].filter(id => !isShort(id) && !isBlocked(id)).map(id => [id, scoreVideo(id, pf, hm)]).sort((a, b) => b[1] - a[1]);
       const out = [], rest = [];
       sc.forEach(([id]) => {
         const c = M(id).channel, n = out.slice(-2).filter(x => M(x).channel === c).length;
@@ -1026,7 +1058,7 @@
       const set = new Set(), hm = histMap();
       Object.keys(S.meta).forEach(id => { if (S.meta[id].title) set.add(id); });
       S.playlists.forEach(p => p.items.forEach(id => set.add(id)));
-      return [...set].filter(id => !(S.set.hideWatched !== false && isDone(hm[id])));
+      return [...set].filter(id => !isShort(id) && !isBlocked(id) && !(S.set.hideWatched !== false && isDone(hm[id])));
     }
     function buildAllFeed() {
       H.cont = continueList();
@@ -1040,7 +1072,7 @@
       const cats = Object.entries(pf.cat).sort((a, b) => b[1] - a[1]).slice(0, 2).map(x => chipQuery(x[0]));
       const chs = Object.entries(pf.ch).sort((a, b) => b[1] - a[1]).slice(0, 2).map(x => x[0]);
       let q = [...cats, ...chs];
-      if (!q.length) q = S.set.topics.slice(0, 3).map(chipQuery);
+      if (q.length < 3) q = q.concat(S.set.topics.filter(t => !(S.set.blockCat[t] >= 3)).sort(() => Math.random() - 0.5).slice(0, 3).map(chipQuery));
       return [...new Set(q)].slice(0, n || 4);
     }
 
@@ -1097,7 +1129,7 @@
         const r = await onlineSearch(chipQuery(chip));
         if (my !== homeTok) return;
         const online = ingest(r, chip);
-        H.ids = rankIds(online.concat(vault), 60);
+        H.ids = rankIds(online.filter(okForFeed).concat(vault), 60);
         H.loading = false;
       } catch (e) {
         if (my !== homeTok) return;
@@ -1117,7 +1149,7 @@
       const pool = [];
       rs.forEach(r => { if (r.status === 'fulfilled') ingest(r.value).forEach(id => { if (!seen.has(id)) { seen.add(id); pool.push(id); } }); });
       const hm = histMap();
-      const ids = rankIds(pool.filter(id => !isDone(hm[id])), 40);
+      const ids = rankIds(pool.filter(id => !isDone(hm[id]) && okForFeed(id)), 40);
       if (!ids.length) {
         ex.innerHTML = H.ids.length || (H.cont && H.cont.length) ? '' : `<div class="empty">${emptyFeedHtml().replace('grid-column:1/-1', '')}</div>`;
         return;
@@ -1569,13 +1601,33 @@
         ['save', 'list', 'Save to playlist'],
         ['wl', wl ? 'check' : 'clock', wl ? 'Remove from Watch later' : 'Save to Watch later'],
         ['channel', 'subs', `Go to ${m.channel}`],
-        ['share', 'share', 'Share video']
+        ['share', 'share', 'Share video'],
+        ['int', 'check', 'Interested'],
+        ['noint', 'close', 'Not interested']
       ];
       if (ctx === 'hist' || ctx === 'histpage') items.push(['rmhist', 'trash', 'Remove from history']);
       if (ctx === 'pl' && pl) items.push(['rmpl', 'trash', 'Remove from this playlist']);
       openSheet(`<div class="shead clamp2">${esc(m.title)}</div>` + items.map(i => `<button class="mi" data-act="mi" data-k="${i[0]}">${ic(i[1])}<span>${i[2]}</span></button>`).join(''));
     }
 
+    let lastNoInt = null;
+    function markInterest(id, yes) {
+      const m = M(id), s = S.set, bump = (o, k) => { if (k && k !== 'General' && k !== 'YouTube') o[k] = (o[k] || 0) + 1; };
+      if (yes) {
+        bump(s.favCat, m.cat); bump(s.favCh, m.channel);
+        if (s.blockV.includes(id)) s.blockV = s.blockV.filter(x => x !== id);
+        sv(K.set, S.set); toast('Got it \u2014 you\u2019ll see more like this');
+        if (S.tab === 'home') loadHome();
+        return;
+      }
+      lastNoInt = { id, ch: m.channel, cat: m.cat };
+      if (!s.blockV.includes(id)) s.blockV.push(id);
+      bump(s.blockCh, m.channel); bump(s.blockCat, m.cat);
+      sv(K.set, S.set);
+      H.ids = (H.ids || []).filter(x => !isBlocked(x)); H.recs = (H.recs || []).filter(x => !isBlocked(x)); H.cont = (H.cont || []).filter(x => !isBlocked(x));
+      document.querySelectorAll('.card[data-id]').forEach(c => { if (isBlocked(c.dataset.id)) c.style.display = 'none'; });
+      toast('Hidden. Fewer videos like this', 'Undo', 'undo-noint');
+    }
     function saveSheet(id) {
       menuCtx = Object.assign(menuCtx || {}, { id });
       openSheet(`<div class="shead">Save to playlist…</div>` + S.playlists.filter(p => p.id !== 'liked').map(p => `<button class="mi" data-act="savepl" data-id="${p.id}">${ic(p.items.includes(id) ? 'check' : 'list')}<span style="flex:1">${esc(p.name)}</span><small style="color:var(--tx2)">${p.items.length}</small></button>`).join('') + `<button class="mi" data-act="savepl-new" style="color:var(--blue)">${ic('plus')}<span>Create new playlist</span></button><div class="srow"><button class="btn pri grow" data-act="sheet-close">Done</button></div>`);
@@ -1634,7 +1686,7 @@
       if (ADD.tab === 'video') {
         b.innerHTML = `
           <div class="inrow"><input id="add-url" placeholder="Paste a YouTube link or video ID" autocomplete="off" autocapitalize="off" inputmode="url"><button class="btn" data-act="paste">Paste</button></div>
-          <p class="hint" id="add-hint">Works with watch, shorts, live and youtu.be links.</p>
+          <p class="hint" id="add-hint">Works with watch, live and youtu.be links.</p>
           <div class="prev" id="add-prev" hidden>
             <img id="add-img" alt="">
             <div style="min-width:0;flex:1"><h4 id="add-title" class="clamp2"></h4><p id="add-chan"></p><p id="add-stat" class="tnum"></p></div>
@@ -1700,7 +1752,7 @@
       }
       if (!id) {
         prev.hidden = true;
-        hint.textContent = v.trim() ? 'That doesn’t look like a YouTube link.' : 'Works with watch, shorts, live and youtu.be links.';
+        hint.textContent = v.trim() ? 'That doesn’t look like a YouTube link.' : 'Works with watch, live and youtu.be links.';
         return;
       }
       hint.textContent = 'Video found';
@@ -1864,7 +1916,7 @@
     /* ==================== SETTINGS PAGE ==================== */
     let deferredInstallPrompt = null;
     window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstallPrompt = e; });
-    window.addEventListener('appinstalled', () => { deferredInstallPrompt = null; toast('TubeVault installed'); });
+    window.addEventListener('appinstalled', () => { deferredInstallPrompt = null; toast('Vaultube installed'); });
 
     function downloadTextFile(filename, text, mime = 'text/plain') {
       const blob = new Blob([text], { type: mime });
@@ -1903,6 +1955,7 @@
         <h5>Topics you like</h5>${bars(topCats, cmax)}
         <h5>Favourite channels</h5>${bars(topChs, hmax, 'var(--a2)')}
         <h5>Topic chips you tapped</h5>${hits.length ? `<div class="lr-tags">${hits.map(([k, v]) => `<span>${esc(k)} <b>${v}</b></span>`).join('')}</div>` : '<p class="hint">None yet.</p>'}
+<h5>Hidden by you</h5>${(S.set.blockV.length || Object.keys(S.set.blockCh).length) ? `<div class="lr-tags">${Object.keys(S.set.blockCh).map(k => `<span>${esc(k)} <b>channel</b></span>`).join('')}${Object.keys(S.set.blockCat).map(k => `<span>${esc(k)} <b>topic</b></span>`).join('')}<span>${S.set.blockV.length} <b>videos</b></span></div><button class="link" data-act="unblock-all" style="margin-top:.4rem">Restore all</button>` : '<p class="hint">Nothing hidden. Use \u22EE \u2192 Not interested on any video.</p>'}
         <h5>Recent searches</h5>${qs.length ? `<div class="lr-tags">${qs.map(x => `<span>${esc(x)}</span>`).join('')}</div>` : '<p class="hint">None yet.</p>'}
         <h5>Recently watched</h5>${recent.length ? recent.map(h => `<div class="lr-v"><img src="${thumb(h.v)}" alt=""><span class="clamp2">${esc(M(h.v).title)}</span><small>${pctOf(h)}%</small></div>`).join('') : '<p class="hint">Nothing watched yet.</p>'}
         <p class="hint" style="margin-top:.7rem">Your playlists, notes and subscriptions also feed recommendations. Remove them from the Library if you want them gone too.</p>`;
@@ -1953,7 +2006,7 @@
         </div>
 
         <div class="set-sec" id="set-api"><h4>Better search &amp; channel data (optional)</h4>
-          <p class="hint" style="margin:0 0 0.6rem">Without a key TubeVault uses free public servers, which are often busy. A free YouTube Data API key makes topic chips, search, channel logos, views, upload dates and subscriptions reliable. It stays on this device.</p>
+          <p class="hint" style="margin:0 0 0.6rem">Without a key Vaultube uses free public servers, which are often busy. A free YouTube Data API key makes topic chips, search, channel logos, views, upload dates and subscriptions reliable. It stays on this device.</p>
           <div class="inrow"><input id="api-in" type="password" autocomplete="off" placeholder="Paste API key (starts with AIza…)" value="${esc(S.set.apiKey || '')}"><button class="btn pri" data-act="api-test">Test</button></div>
           <p class="hint" id="api-status">${hasKey() ? (API_ST.msg ? esc(API_ST.msg) : 'Key saved.') : 'No key set.'}</p>
           <details class="howto"><summary>How to get a free key (2 minutes)</summary>
@@ -1965,7 +2018,7 @@
           <p class="hint" style="margin:0 0 .7rem">Everything is stored only on this phone. Recommendations are built from the signals below \u2014 you can read them and wipe them any time.</p>
           <button class="btn red" style="width:100%" data-act="forget-all">${ic('trash', 17)} Delete everything about you</button>
           <details class="learned" id="learned"${S.learnedOpen ? ' open' : ''}>
-            <summary><span>${ic('eye', 18)} What TubeVault has learned about you</span><i>${ic('chev', 18)}</i></summary>
+            <summary><span>${ic('eye', 18)} What Vaultube has learned about you</span><i>${ic('chev', 18)}</i></summary>
             ${learnedHtml()}
           </details>
         </div>
@@ -1978,10 +2031,10 @@
         </div>
 
         <div class="set-sec"><h4>Install &amp; share from YouTube</h4>
-          <button class="btn red" style="width:100%" data-act="install-pwa">${ic('download', 17)} Install TubeVault</button>
-          <p class="hint">Once installed from an https link, open any video in the YouTube app, tap <b>Share</b>, pick <b>TubeVault</b>. It is saved to Watch later instantly and you are sent straight back to YouTube.</p>
+          <button class="btn red" style="width:100%" data-act="install-pwa">${ic('download', 17)} Install Vaultube</button>
+          <p class="hint">Once installed from an https link, open any video in the YouTube app, tap <b>Share</b>, pick <b>Vaultube</b>. It is saved to Watch later instantly and you are sent straight back to YouTube.</p>
         </div>
-        <p class="hint" style="text-align:center;padding:0.5rem 0 1.5rem">TubeVault · distraction-free learning</p>
+        <p class="hint" style="text-align:center;padding:0.5rem 0 1.5rem">Vaultube · distraction-free learning</p>
       `;
       $('sub').scrollTop = sc;
     }
@@ -2349,7 +2402,7 @@
       const id = S.cur;
       if (!id) return;
       const m = M(id), nl = S.notes[id] || [];
-      $('wp-title').textContent = m.title;
+      { const mt = [m.views, m.pub].filter(Boolean).join(' \u2022 '); $('wp-title').innerHTML = esc(m.title) + (mt ? ` <span class="wp-inl">${esc(mt)}</span>` : ''); }
       $('wp-chan').textContent = m.channel || 'YouTube';
       $('wp-meta').textContent = [m.views, m.pub, m.cat].filter(Boolean).join(' • ');
       $('wp-av').innerHTML = avatar(m.channel);
@@ -2599,7 +2652,7 @@
     }
     function exportNotesSheet(ids) {
       const text = notesMarkdown(ids);
-      NE_EXPORT = { text, name: ids.length === 1 ? M(ids[0]).title.slice(0, 40) : 'TubeVault notes' };
+      NE_EXPORT = { text, name: ids.length === 1 ? M(ids[0]).title.slice(0, 40) : 'Vaultube notes' };
       openSheet(`<div class="shead">Export notes</div>
         <button class="mi" data-act="exp-copy">${ic('list')}<span>Copy as Markdown</span></button>
         <button class="mi" data-act="exp-share">${ic('share')}<span>Share…</span></button>
@@ -2947,12 +3000,22 @@
       'pl-shuffle'() { const p = PL(S.sub.id); if (!p || !p.items.length) return; const q = p.items.slice().sort(() => Math.random() - 0.5); playVideo(q[0], { queue: q, start: 0 }); },
       'pl-add'() { openAdd(null, 'video', S.sub && PL(S.sub.id) && S.sub.id !== 'liked' ? S.sub.id : 'wl'); },
 
+      'undo-noint'() {
+        const l = lastNoInt; if (!l) return; const s = S.set;
+        s.blockV = s.blockV.filter(x => x !== l.id);
+        if (s.blockCh[l.ch]) { s.blockCh[l.ch]--; if (s.blockCh[l.ch] <= 0) delete s.blockCh[l.ch]; }
+        if (s.blockCat[l.cat]) { s.blockCat[l.cat]--; if (s.blockCat[l.cat] <= 0) delete s.blockCat[l.cat]; }
+        sv(K.set, S.set); lastNoInt = null; toast('Restored'); if (S.tab === 'home') loadHome();
+      },
+      'unblock-all'() { S.set.blockV = []; S.set.blockCh = {}; S.set.blockCat = {}; sv(K.set, S.set); renderSettings(); toast('Hidden items restored'); },
       mi(el) {
         const k = el.dataset.k, { id, ctx, pl } = menuCtx || {};
         if (k === 'save') saveSheet(id);
         else if (k === 'wl') { const a = togglePl('wl', id); closeSheet(); renderVisible(); toast(a ? 'Saved to Watch later' : 'Removed from Watch later'); }
         else if (k === 'channel') { closeSheet(); openChannelPage(M(id).channel); }
         else if (k === 'share') { closeSheet(); shareVideo(id); }
+        else if (k === 'int') { markInterest(id, true); closeSheet(); }
+        else if (k === 'noint') { markInterest(id, false); closeSheet(); }
         else if (k === 'rmhist') { S.hist = S.hist.filter(h => h.v !== id); sv(K.hist, S.hist); closeSheet(); renderVisible(); toast('Removed from history'); }
         else if (k === 'rmpl') { const p = PL(pl); if (p) { p.items = p.items.filter(x => x !== id); sv(K.pl, S.playlists); } closeSheet(); renderVisible(); toast('Removed from playlist'); }
       },
@@ -2985,7 +3048,7 @@
       'topic-del'(el) { S.set.topics = S.set.topics.filter(t => t !== el.dataset.v); if (!S.set.topics.length) S.set.topics = DEF_TOPICS.slice(); if (S.chip === el.dataset.v) { S.chip = 'All'; loadHome(); } sv(K.set, S.set); renderChips(); renderSettings(); },
       'forget-all'() {
         confirmSheet('Delete everything about you?', 'This erases watch history, study sessions, analytics, topic taps, search history and cached feeds on this device. Playlists, notes, subscriptions and settings stay.', 'Delete', () => {
-          S.hist = []; S.sessions = []; S.usage = {}; S.set.hits = {};
+          S.hist = []; S.sessions = []; S.usage = {}; S.set.hits = {}; S.set.blockV = []; S.set.blockCh = {}; S.set.blockCat = {}; S.set.favCh = {}; S.set.favCat = {};
           sv(K.hist, S.hist); sv(K.sess, S.sessions); sv(K.usage, S.usage); sv(K.set, S.set);
           ['tv3_q', K.cache, K.subfeed].forEach(k => localStorage.removeItem(k));
           Object.keys(PC).forEach(k => delete PC[k]); scache.clear();
@@ -3174,7 +3237,7 @@
           if (!d || d.app !== 'tubevault' || !d.data) throw 0;
           Object.entries(d.data).forEach(([k, v]) => { if (Object.values(K).includes(k)) localStorage.setItem(k, v); });
           location.reload();
-        }).catch(() => toast('That file is not a TubeVault backup'));
+        }).catch(() => toast('That file is not a Vaultube backup'));
       } else if (t.id === 'topics-in') {
         const l = [...new Set(t.value.split(',').map(x => x.trim()).filter(Boolean))].slice(0, 14);
         S.set.topics = l.length ? l : DEF_TOPICS.slice();
@@ -3329,7 +3392,7 @@
       loadHome();
 
       const sp = $('splash');
-      if (sp) { setTimeout(() => { sp.classList.add('out'); setTimeout(() => sp.remove(), 450); }, 650); }
+      if (sp) { setTimeout(() => { sp.classList.add('out'); setTimeout(() => sp.remove(), 600); }, 1800); }
       if (new URLSearchParams(location.search).get('add')) { try { history.replaceState({}, '', location.pathname); } catch (e) {} setTimeout(() => openAdd(), 700); }
       else if (!handleShare()) setTimeout(checkClip, 500);
       if ('IntersectionObserver' in window) {

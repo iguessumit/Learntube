@@ -1,13 +1,13 @@
 {
   "id": "./",
-  "name": "TubeVault",
-  "short_name": "TubeVault",
+  "name": "Vaultube",
+  "short_name": "Vaultube",
   "description": "Distraction-free YouTube for learning: study timer, notes and analytics.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#130c24",
+  "background_color": "#0d0d0f",
   "theme_color": "#0d0d0f",
   "categories": [
     "education",

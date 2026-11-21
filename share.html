@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#130c24">
-  <title>Saving to TubeVault…</title>
+  <title>Saving to Vaultube…</title>
   <link rel="icon" type="image/svg+xml" href="./icon.svg">
   <style>
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -33,7 +33,7 @@
 </head>
 <body>
   <div class="card" id="card">
-    <div class="top"><img src="./icon.svg" alt=""><b>TubeVault</b><span class="st" id="st">Saving…</span></div>
+    <div class="top"><img src="./icon.svg" alt=""><b>Vaultube</b><span class="st" id="st">Saving…</span></div>
     <div class="pv" id="pv" hidden><img id="th" alt=""></div>
     <h1 id="ttl">Saving to Watch later…</h1>
     <p id="sub"></p>
@@ -72,7 +72,7 @@
     if (pl || id) { goApp(); return; }
     $('st').className = 'st err'; $('st').textContent = 'No video found';
     $('ttl').textContent = 'That share did not contain a YouTube link.';
-    $('sub').textContent = 'Open a video in YouTube, tap Share, then choose TubeVault.';
+    $('sub').textContent = 'Open a video in YouTube, tap Share, then choose Vaultube.';
     return;
   }
 
