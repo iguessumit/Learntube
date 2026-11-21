@@ -61,12 +61,41 @@
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="fg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd24a"/><stop offset=".5" stop-color="#ff7a1a"/><stop offset="1" stop-color="#ff2e4c"/></linearGradient>
+      <linearGradient id="bg-ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff4d6d"/><stop offset="1" stop-color="#ffa43b"/></linearGradient>
+      <linearGradient id="bg-face" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#201936"/><stop offset="1" stop-color="#0f0c1b"/></linearGradient>
+      <symbol id="brand" viewBox="0 0 512 512">
+        <circle cx="256" cy="256" r="190" fill="none" stroke="url(#bg-ring)" stroke-width="44"/>
+        <circle cx="256" cy="256" r="168" fill="url(#bg-face)"/>
+        <path d="M222 190v132l112-66z" fill="#fff" stroke="#fff" stroke-width="26" stroke-linejoin="round"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <!-- ==================== SPLASH ==================== -->
+  <div id="splash" aria-hidden="true">
+    <div class="sp-logo">
+      <svg viewBox="0 0 512 512"><defs>
+        <linearGradient id="s-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2a1250"/><stop offset="1" stop-color="#090913"/></linearGradient>
+        <radialGradient id="s-glow" cx="50%" cy="48%" r="55%"><stop offset="0" stop-color="#ff3b5c" stop-opacity=".45"/><stop offset="1" stop-color="#ff3b5c" stop-opacity="0"/></radialGradient>
+      </defs>
+        <rect width="512" height="512" rx="116" fill="url(#s-bg)"/><rect width="512" height="512" rx="116" fill="url(#s-glow)"/>
+        <circle class="sp-ring" cx="256" cy="256" r="152" fill="none" stroke="url(#bg-ring)" stroke-width="28" stroke-linecap="round" pathLength="100"/>
+        <circle cx="256" cy="256" r="138" fill="url(#bg-face)"/>
+        <path d="M226 198v116l98-58z" fill="#fff" stroke="#fff" stroke-width="24" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="sp-name"><b>Tube</b><i>Vault</i></div>
+    <div class="sp-tag">Learn without distractions</div>
+  </div>
 
   <!-- ==================== STICKY HEADER & TOPIC CHIPS ==================== -->
   <div id="hdr">
     <header id="topbar">
       <div class="logo" data-act="home-top" aria-label="TubeVault">
-        <span class="mk"><svg style="width:0.875rem;height:0.875rem" viewBox="0 0 24 24"><path d="M7 4v16l13-8z" fill="currentColor"/></svg></span>
+        <span class="mk"><svg viewBox="0 0 512 512"><use href="#brand"/></svg></span>
         <span class="wm"><b>Tube</b><i>Vault</i></span>
       </div>
       <div class="sp"></div>
@@ -101,16 +130,6 @@
 
   <!-- ==================== IN-APP YOUTUBE PLAYER LAYER ==================== -->
   <div id="player-layer">
-    <!-- Top Lecture Stopwatch & Break Tracker -->
-    <div id="study-bar">
-      <span id="st-mode-pill" class="st-mode">LECTURE</span>
-      <span id="st-main-time" class="st-time tnum">00:00</span>
-      <span id="st-break-time" class="st-sub tnum">Break 00:00</span>
-      <div class="sp"></div>
-      <button id="st-toggle-btn" class="st-btn act" data-act="st-toggle">Pause</button>
-      <button id="st-break-btn" class="st-btn" data-act="st-break">Take Break</button>
-    </div>
-
     <!-- Portrait Cinema Top HUD (Centered Mode) -->
     <div id="th-top">
       <div class="th-bar">
@@ -131,6 +150,7 @@
       <div id="yt-host"></div>
       <div id="shield"></div>
       <div id="ad-chip"><b>Ad</b><span id="ad-txt">Tap “Skip” on the video when it appears</span></div>
+      <button class="ib" id="ad-min" data-act="c-min" aria-label="Minimise"></button>
 
       <button class="ib" id="nbtn" data-act="c-min" aria-label="Minimise"></button>
       <button class="ib" id="nsw" data-act="fb-next">Switch server</button>
@@ -143,6 +163,7 @@
           <button class="ib" data-act="c-min" id="c-min"></button>
           <div class="sp"></div>
           <button class="ib" data-act="c-theater" id="c-theater" title="Portrait Cinema (Centered Middle Screen)"></button>
+          <button class="skip-ad-pill" data-act="ad-manual" id="c-ad">Ad? Tap to skip</button>
           <button class="ib" data-act="c-auto" id="c-auto" aria-label="Autoplay"></button>
           <button class="ib" data-act="c-speed" id="c-speed" aria-label="Playback speed"></button>
         </div>
@@ -202,9 +223,15 @@
         <h1 id="wp-title" data-act="wp-more"></h1>
         <div id="wp-stats"><span id="wp-meta"></span></div>
 
-        <div class="desc-box" id="wp-desc-box" data-act="toggle-desc">
-          <div class="desc-text" id="wp-desc">Loading video description...</div>
-          <span class="desc-more" id="wp-desc-more">...more</span>
+        <div id="study-bar" class="study-card">
+          <span class="sc-ic" id="st-ic"></span>
+          <div class="sc-grid">
+            <div class="sc-box" id="sc-lec"><small>Lecture</small><b id="st-main-time" class="tnum">00:00</b></div>
+            <div class="sc-box" id="sc-brk"><small>Break</small><b id="st-break-time" class="tnum">00:00</b></div>
+          </div>
+          <span class="sp"></span>
+          <button id="st-toggle-btn" class="sbtn pri" data-act="st-toggle" aria-label="Pause"></button>
+          <button id="st-break-btn" class="sbtn" data-act="st-break" aria-label="Take a break"></button>
         </div>
 
         <div class="wp-chan">
@@ -220,8 +247,8 @@
           <button class="pill" id="b-more" data-act="b-more"></button>
         </div>
 
-        <div class="ncard" data-act="b-notes">
-          <div class="nh"><b>Notes</b><span id="notes-n">0</span></div>
+        <div class="ncard" id="notes-card" data-act="b-notes" role="button" aria-expanded="false">
+          <div class="nh"><span class="nh-ic" id="notes-ic"></span><b>Notes</b><span id="notes-n">0</span><span class="sp"></span><span class="nh-chev" id="notes-chev"></span></div>
           <p id="notes-prev"></p>
         </div>
         <div id="notes-box" class="notes-host" hidden></div>

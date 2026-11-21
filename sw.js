@@ -1,6 +1,6 @@
 /* TubeVault service worker: offline app shell. Bump VERSION to push an update. */
-const VERSION = 'tubevault-v2';
-const SHELL = ['./', './index.html', './styles.css', './app.js', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png'];
+const VERSION = 'tubevault-v3';
+const SHELL = ['./', './index.html', './share.html', './styles.css', './app.js', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -15,7 +15,8 @@ self.addEventListener('fetch', e => {
   if (url.origin !== location.origin) return; // YouTube, search APIs and images always go to the network
   // Pages (including share-target links with ?url=...): network first, cached shell when offline.
   if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).catch(() => caches.match('./index.html')));
+    const fallback = /share\.html$/.test(url.pathname) ? './share.html' : './index.html';
+    e.respondWith(fetch(req).catch(() => caches.match(fallback)));
     return;
   }
   // Static files: cached copy first, refreshed in the background.

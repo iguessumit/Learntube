@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#130c24">
+  <title>Saving to TubeVault…</title>
+  <link rel="icon" type="image/svg+xml" href="./icon.svg">
+  <style>
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;height:100%;background:#130c24;color:#f4f4f6;font:500 16px/1.4 "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+    body{display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(120% 80% at 50% 0%,#2a1250 0%,#130c24 55%,#090913 100%)}
+    .card{width:100%;max-width:380px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:22px;padding:18px;backdrop-filter:blur(14px);box-shadow:0 20px 60px rgba(0,0,0,.5);animation:up .25s ease-out}
+    @keyframes up{from{transform:translateY(16px);opacity:0}}
+    .top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+    .top img{width:30px;height:30px;border-radius:9px}
+    .top b{font-size:15px;letter-spacing:-.01em}
+    .st{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#7ee2a8}
+    .st svg{width:18px;height:18px}
+    .st.err{color:#ff9aa8}
+    .pv{position:relative;border-radius:14px;overflow:hidden;aspect-ratio:16/9;background:#1c1c20}
+    .pv img{width:100%;height:100%;object-fit:cover;display:block}
+    h1{font-size:15px;font-weight:700;line-height:1.35;margin:12px 0 2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    p{margin:0;font-size:12.5px;color:#a8a3bd}
+    .row{display:flex;gap:10px;margin-top:16px}
+    button{font:inherit;border:0;cursor:pointer;flex:1;height:44px;border-radius:22px;font-weight:700;font-size:14px;color:#fff;background:rgba(255,255,255,.12)}
+    button.pri{background:linear-gradient(135deg,#ff4d6d,#ff7a3c)}
+    button:active{transform:scale(.97)}
+    .bar{height:3px;background:rgba(255,255,255,.12);border-radius:2px;margin-top:14px;overflow:hidden}
+    .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff4d6d,#ffa43b);animation:fill 1.6s linear forwards}
+    @keyframes fill{to{width:100%}}
+  </style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="top"><img src="./icon.svg" alt=""><b>TubeVault</b><span class="st" id="st">Saving…</span></div>
+    <div class="pv" id="pv" hidden><img id="th" alt=""></div>
+    <h1 id="ttl">Saving to Watch later…</h1>
+    <p id="sub"></p>
+    <div class="bar" id="bar" hidden><i></i></div>
+    <div class="row"><button id="done">Done</button><button class="pri" id="open">Open app</button></div>
+  </div>
+<script>
+(function () {
+  var $ = function (i) { return document.getElementById(i); };
+  var ld = function (k, d) { try { var v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
+  var sv = function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
+  var CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>';
+
+  var p = new URLSearchParams(location.search);
+  var raw = [p.get('url'), p.get('text'), p.get('title')].filter(Boolean).join(' ').trim();
+
+  function vid(s) {
+    var r = [/[?&]v=([\w-]{11})/, /youtu\.be\/([\w-]{11})/, /youtube\.com\/(?:shorts|embed|live)\/([\w-]{11})/, /\b([\w-]{11})\b/];
+    for (var i = 0; i < r.length; i++) { var m = s.match(r[i]); if (m && (i < 3 || /^[\w-]{11}$/.test(s.trim()))) return m[1]; }
+    return null;
+  }
+  var id = vid(raw);
+  var pl = (raw.match(/[?&]list=([\w-]{10,})/) || [])[1];
+
+  function goApp() { location.replace('./index.html' + location.search); }
+  function leave() {
+    try { window.close(); } catch (e) {}
+    setTimeout(function () { try { history.back(); } catch (e) {} }, 250);
+  }
+
+  $('done').onclick = leave;
+  $('open').onclick = function () { location.replace('./index.html'); };
+
+  // Playlist links need the importer UI, so hand those to the app.
+  if (!id || (pl && /playlist\?/.test(raw))) {
+    if (pl || id) { goApp(); return; }
+    $('st').className = 'st err'; $('st').textContent = 'No video found';
+    $('ttl').textContent = 'That share did not contain a YouTube link.';
+    $('sub').textContent = 'Open a video in YouTube, tap Share, then choose TubeVault.';
+    return;
+  }
+
+  // Save straight to Watch later.
+  var pls = ld('tv3_playlists', null);
+  if (!Array.isArray(pls)) pls = [{ id: 'wl', name: 'Watch later', sys: true, items: [] }, { id: 'liked', name: 'Liked videos', sys: true, items: [] }];
+  var wl = pls.filter(function (x) { return x.id === 'wl'; })[0];
+  if (!wl) { wl = { id: 'wl', name: 'Watch later', sys: true, items: [] }; pls.unshift(wl); }
+  var had = wl.items.indexOf(id) > -1;
+  if (!had) wl.items.unshift(id);
+  var ok = sv('tv3_playlists', pls);
+
+  $('pv').hidden = false;
+  $('th').src = 'https://i.ytimg.com/vi/' + id + '/mqdefault.jpg';
+  $('st').innerHTML = (ok ? CHECK + (had ? 'Already saved' : 'Saved') : 'Could not save');
+  if (!ok) $('st').className = 'st err';
+  $('sub').textContent = 'Watch later';
+  $('ttl').textContent = p.get('title') || 'YouTube video';
+  document.title = 'Saved to Watch later';
+
+  // Fetch title (display + stored so the app shows it instantly).
+  var meta = ld('tv3_meta', {});
+  var m = meta[id] || (meta[id] = {});
+  if (p.get('title') && !m.title) m.title = p.get('title');
+  function saveMeta() { sv('tv3_meta', meta); }
+  saveMeta();
+  var c = new AbortController(); var t = setTimeout(function () { c.abort(); }, 2500);
+  fetch('https://noembed.com/embed?url=https://www.youtube.com/watch?v=' + id, { signal: c.signal })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d && d.title) { m.title = m.title || d.title; if (d.author_name) m.channel = m.channel || d.author_name; saveMeta(); $('ttl').textContent = m.title; $('sub').textContent = (m.channel ? m.channel + ' · ' : '') + 'Watch later'; }
+    }).catch(function () {}).then(function () { clearTimeout(t); });
+
+  // Auto-return to YouTube.
+  $('bar').hidden = false;
+  setTimeout(leave, 1700);
+})();
+</script>
+</body>
+</html>

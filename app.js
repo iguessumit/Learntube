@@ -97,17 +97,52 @@
 
     const AV = ld(K.av, {});
     let avT = null;
+    const normAv = u => String(u || '').replace(/^https?:\/\/[^/]+\/ggpht\//, 'https://yt3.ggpht.com/').replace(/^http:\/\//, 'https://');
     function setAv(ch, url) {
+      url = normAv(url);
       if (!ch || !url || AV[ch] === url) return;
       AV[ch] = url;
       clearTimeout(avT);
       avT = setTimeout(() => sv(K.av, AV), 700);
     }
+    const avImg = u => `<img class="avimg" src="${esc(u)}" referrerpolicy="no-referrer" loading="lazy" onerror="avErr(this)" alt="">`;
+    window.avErr = function (img) {
+      if (!img.dataset.r) { img.dataset.r = '1'; img.src = 'https://wsrv.nl/?w=120&h=120&fit=cover&url=' + encodeURIComponent(img.getAttribute('src')); }
+      else img.remove();
+    };
     function avatar(name, sizeCls = '') {
       const n = (name || '?').trim() || '?';
       const c = [...n][0];
       const u = AV[n];
-      return `<div class="avatar ${sizeCls}" style="background:hsl(${hue(n)} 48% 38%)">${esc(c.toUpperCase())}${u ? `<img class="avimg" src="${esc(u)}" referrerpolicy="no-referrer" loading="lazy" onerror="this.remove()" alt="">` : ''}</div>`;
+      if (!u) queueAv(n);
+      return `<div class="avatar ${sizeCls}" data-n="${esc(n)}" style="background:hsl(${hue(n)} 48% 38%)">${esc(c.toUpperCase())}${u ? avImg(u) : ''}</div>`;
+    }
+    /* Channel logos are looked up in the background the first time a channel is shown. */
+    const avTried = {}, avQ = [];
+    let avRun = 0;
+    function queueAv(n) {
+      if (!n || n === 'YouTube' || n === '?' || AV[n]) return;
+      if (avTried[n] && Date.now() - avTried[n] < 120000) return;
+      avTried[n] = Date.now();
+      avQ.push(n);
+      setTimeout(pumpAv, 0);
+    }
+    function pumpAv() {
+      while (avRun < 2 && avQ.length) {
+        const n = avQ.shift();
+        avRun++;
+        resolveAvatar(n).finally(() => { avRun--; pumpAv(); });
+      }
+    }
+    async function resolveAvatar(n) {
+      try { await resolveCid(n); } catch (e) {}
+      if (!AV[n]) { try { const a = await channelAbout(n); if (a && a.av) setAv(n, a.av); } catch (e) {} }
+      if (AV[n]) paintAv(n);
+    }
+    function paintAv(n) {
+      document.querySelectorAll('.avatar[data-n]').forEach(el => {
+        if (el.dataset.n === n && !el.querySelector('.avimg')) el.insertAdjacentHTML('beforeend', avImg(AV[n]));
+      });
     }
     function profAvatar(big) {
       const ph = S.set.photo;
@@ -159,8 +194,29 @@
       theater: '<rect x="2" y="4" width="20" height="16" rx="3"/><rect x="4" y="8.5" width="16" height="7" fill="currentColor" opacity="0.35"/><path d="M4 8.5h16v7H4z"/>',
       queue: '<path d="M3 6h14M3 12h14M3 18h10"/><path d="M17 15v6l5-3z" fill="currentColor"/>',
       star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/>',
-      collapse: '<path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"/>'
+      collapse: '<path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"/>',
+      flame: '<path d="M13.2 2.5L4.6 13.6a.6.6 0 0 0 .5 1h5.3l-1 6.4a.4.4 0 0 0 .7.3l8.9-11.5a.6.6 0 0 0-.5-1h-5.2l1.1-6.1a.4.4 0 0 0-.7-.2z" fill="currentColor" stroke-width="1.4"/>',
+      coffee: '<path d="M10 2v2M14 2v2M6 2v2"/><path d="M16 8h1a4 4 0 1 1 0 8h-1"/><path d="M4 8h12v9a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"/>',
+      target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+      eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+      shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>',
+      calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+      bolt: '<path d="M13 2L3 14h9l-1 8 10-12h-9z"/>',
+      trend: '<path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>',
+      trendd: '<path d="M22 17l-8.5-8.5-5 5L2 7"/><path d="M16 17h6v-6"/>',
+      book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+      bul: '<path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/>',
+      task: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><path d="M5 6.5l1.5 1.5L9 5.5"/><path d="M14 6h7M14 17h7"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>',
+      quote: '<path d="M3 21c3 0 7-1 7-8V5H3v8h4c0 3-2 4-4 4zM14 21c3 0 7-1 7-8V5h-7v8h4c0 3-2 4-4 4z"/>',
+      hl: '<path d="M9 11l-6 6v3h9l3-3"/><path d="M22 12l-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>',
+      layers: '<path d="M12 2l10 5-10 5L2 7z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>',
+      sparkle: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 17v4M17 19h4"/>',
+      timer: '<path d="M10 2h4"/><path d="M12 14l3-3"/><circle cx="12" cy="14" r="8"/>',
+      chevu: '<path d="M18 15l-6-6-6 6"/>',
+      brain: '<path d="M9.5 2A2.5 2.5 0 0 0 7 4.5v0A2.5 2.5 0 0 0 4.5 7 3 3 0 0 0 4 12.5 3 3 0 0 0 6 17.5a3 3 0 0 0 3 2.5 2.5 2.5 0 0 0 2.5-2.5v-13A2.5 2.5 0 0 0 9.5 2z"/><path d="M14.5 2A2.5 2.5 0 0 1 17 4.5 2.5 2.5 0 0 1 19.5 7a3 3 0 0 1 .5 5.5 3 3 0 0 1-2 5 3 3 0 0 1-3 2.5 2.5 2.5 0 0 1-2.5-2.5"/>',
+      user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>'
     };
+    const flameIc = (sz = 20) => ic('flame', sz).replace('<svg ', '<svg class="flame" ');
     const ic = (n, sz = 24) => `<svg viewBox="0 0 24 24" style="width:${sz / 16}rem;height:${sz / 16}rem" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${P[n] || ''}</svg>`;
 
     /* ==================== DATA & PERSISTENCE ==================== */
@@ -397,7 +453,7 @@
           ['title', 'channel', 'cid', 'dur', 'views', 'pub', 'ts', 'desc'].forEach(k => { if (x[k]) o[k] = x[k]; });
           if (!o.cat && x.title) o.cat = detectCategory((x.title || '') + ' ' + (x.channel || ''));
           setMeta(x.id, o);
-          if (x.av && x.channel) setAv(dec(x.channel), x.av);
+          if (x.av && x.channel) { setAv(dec(x.channel), x.av); setTimeout(() => paintAv(dec(x.channel)), 0); }
           return x.id;
         });
     }
@@ -521,7 +577,7 @@
           r = await Promise.any(tasks);
         }
         setMeta(id, { title: r.title, channel: r.channel, cid: r.cid, dur: r.dur, views: r.views, pub: r.pub, ts: r.ts, desc: r.desc, tav: Date.now() });
-        if (r.av && r.channel) setAv(dec(r.channel), r.av);
+        if (r.av && r.channel) { setAv(dec(r.channel), r.av); paintAv(dec(r.channel)); }
       } catch (e) {
         try {
           const d = await tfetch('https://noembed.com/embed?url=https://www.youtube.com/watch?v=' + id, 8000);
@@ -668,25 +724,21 @@
 
     function updateStudyBarUI() {
       const bar = $('study-bar');
-      const pill = $('st-mode-pill');
-      const main = $('st-main-time');
-      const brk = $('st-break-time');
-      const togBtn = $('st-toggle-btn');
-      const brkBtn = $('st-break-btn');
       if (!bar) return;
-
       const isBreak = ST.mode === 'break';
       bar.classList.toggle('break-mode', isBreak);
-      pill.textContent = isBreak ? 'ON BREAK' : 'LECTURE';
-      main.textContent = isBreak ? fmt(ST.breakSec) : fmt(ST.lectureSec);
-      brk.textContent = isBreak ? `Lecture ${fmt(ST.lectureSec)}` : `Break ${fmt(ST.breakSec)}`;
-
-      togBtn.textContent = ST.running ? 'Pause' : 'Start';
-      togBtn.classList.toggle('act', ST.running && !isBreak);
-
-      brkBtn.textContent = isBreak ? 'Resume Lecture' : 'Take Break';
-      brkBtn.classList.toggle('brk', isBreak);
-
+      bar.classList.toggle('paused', !ST.running);
+      $('st-main-time').textContent = fmt(ST.lectureSec);
+      $('st-break-time').textContent = fmt(ST.breakSec);
+      $('sc-lec').classList.toggle('act', !isBreak);
+      $('sc-brk').classList.toggle('act', isBreak);
+      const tog = $('st-toggle-btn'), brk = $('st-break-btn');
+      tog.innerHTML = ic(ST.running ? 'pause' : 'play', 15);
+      tog.title = ST.running ? 'Pause' : 'Resume'; tog.setAttribute('aria-label', tog.title);
+      brk.innerHTML = ic(isBreak ? 'book' : 'coffee', 15);
+      brk.title = isBreak ? 'Back to lecture' : 'Take a break'; brk.setAttribute('aria-label', brk.title);
+      brk.classList.toggle('brk', isBreak);
+      const ico = $('st-ic'); if (ico && !ico.firstChild) ico.innerHTML = ic('timer', 15);
       const thChip = $('th-study-btn');
       if (thChip) {
         thChip.textContent = isBreak ? `Break ${fmt(ST.breakSec)}` : fmt(ST.lectureSec);
@@ -800,6 +852,16 @@
         try { history.pushState({ tv: 1 }, ''); sentinel = true; } catch (e) {}
       }
     }
+    function purgeKind(kind) { for (let i = stack.length - 1; i >= 0; i--) if (stack[i].kind === kind) stack.splice(i, 1); }
+    function dropLayer(kind) {
+      for (let i = stack.length - 1; i >= 0; i--) {
+        if (stack[i].kind === kind) { const l = stack.splice(i, 1)[0]; try { l.close(); } catch (e) {} break; }
+      }
+      if (!stack.length && sentinel) {
+        clearTimeout(sTimer);
+        sTimer = setTimeout(() => { if (!stack.length && sentinel) { sentinel = false; ignorePop++; history.back(); } }, 150);
+      }
+    }
     function closeTopLayer() {
       const l = stack.pop();
       if (!l) return;
@@ -827,6 +889,7 @@
     let sheetOpen = false, confirmFn = null;
     function openSheet(html) {
       const r = $('sheet-root');
+      if (sheetOpen && !r.classList.contains('on')) { sheetOpen = false; purgeKind('sheet'); }
       if (!sheetOpen) {
         sheetOpen = true;
         r.classList.add('on');
@@ -834,7 +897,7 @@
       }
       r.innerHTML = `<div class="sbackdrop" data-act="sheet-close"></div><div class="spanel">${html}</div>`;
     }
-    function closeSheet() { if (sheetOpen) closeTopLayer(); }
+    function closeSheet() { if (sheetOpen) dropLayer('sheet'); }
 
     let toastT = null;
     function toast(msg, actionLabel, actionAct) {
@@ -861,29 +924,28 @@
       }
       S.sub = Object.assign({}, kind);
     }
-    function closeSub() {
-      if (subOpen && stack.length && stack[stack.length - 1].kind === 'sub') closeTopLayer();
-    }
+    function closeSub() { if (subOpen) dropLayer('sub'); }
     const subHeader = (title, right) => `<div class="subhead"><button class="ib" data-act="sub-back" aria-label="Back">${ic('back')}</button><h2>${title}</h2>${right || ''}</div>`;
 
     /* ==================== CARD RENDERERS ==================== */
     function thumbBox(id, m, h, cls = 'thumb', resume) {
       const pct = pctOf(h), dur = m.dur || (h && h.t) || 0;
-      return `<div class="${cls}"><img src="${thumb(id)}" loading="lazy" decoding="async" alt="">${resume && h && pct > 0 && pct < 95 ? `<span class="resume tnum">▶ Resume ${fmt(h.w)}</span>` : ''}${dur ? `<span class="dur tnum">${fmt(dur)}</span>` : ''}${pct > 0 ? `<div class="prog"><i style="width:${pct}%"></i></div>` : ''}</div>`;
+      return `<div class="${cls}"><img src="${thumb(id)}" loading="lazy" decoding="async" alt="">${resume && h && pct > 0 && pct < 95 ? `<span class="resume tnum">${ic('play', 11)} Resume ${fmt(h.w)}</span>` : ''}${dur ? `<span class="dur tnum">${fmt(dur)}</span>` : ''}${pct > 0 ? `<div class="prog"><i style="width:${pct}%"></i></div>` : ''}</div>`;
     }
 
+    /* YouTube-style card: rounded edge-to-edge thumbnail, round channel logo, 2-line title, one meta line, vertical dots. */
     function cardHtml(id, ctx, hm, resume) {
       const m = M(id), h = hm[id];
       return `
         <article class="card" data-act="play" data-id="${id}" data-ctx="${ctx}">
           ${thumbBox(id, m, h, 'thumb', resume)}
           <div class="cbody">
-            <span data-act="open-channel" data-ch="${esc(m.channel)}">${avatar(m.channel)}</span>
+            <span class="cav" data-act="open-channel" data-ch="${esc(m.channel)}">${avatar(m.channel)}</span>
             <div class="ct">
               <h3 class="ctitle" data-t="${id}">${esc(m.title)}</h3>
               <p class="csub" data-c="${id}">${esc(subline(m))}</p>
             </div>
-            <button class="ib" data-act="menu" data-id="${id}" aria-label="More">${ic('more', 20)}</button>
+            <button class="ib mnu" data-act="menu" data-id="${id}" aria-label="More">${ic('more', 20)}</button>
           </div>
         </article>`;
     }
@@ -901,8 +963,8 @@
           </div>
           ${isPlaylist && S.reordering ? `
             <div class="reord-btns">
-              <button data-act="pl-move" data-dir="-1" data-idx="${idx}" ${idx === 0 ? 'disabled' : ''}>▲</button>
-              <button data-act="pl-move" data-dir="1" data-idx="${idx}" ${idx === total - 1 ? 'disabled' : ''}>▼</button>
+              <button data-act="pl-move" data-dir="-1" data-idx="${idx}" ${idx === 0 ? 'disabled' : ''} aria-label="Move up">${ic('chevu', 14)}</button>
+              <button data-act="pl-move" data-dir="1" data-idx="${idx}" ${idx === total - 1 ? 'disabled' : ''} aria-label="Move down">${ic('chev', 14)}</button>
             </div>` : ''}
           <button class="ib" data-act="menu" data-id="${id}" aria-label="More">${ic('more', 20)}</button>
         </div>`;
@@ -913,7 +975,7 @@
       return inner;
     }
 
-    const skelCards = n => Array.from({ length: n }, () => `<div class="card"><div class="thumb sk"></div><div class="cbody"><div class="avatar sk"></div><div class="ct"><div class="sk line"></div><div class="sk line s"></div></div></div></div>`).join('');
+    const skelCards = n => Array.from({ length: n }, () => `<div class="card"><div class="thumb sk"></div><div class="cbody"><div class="cav"><div class="avatar sk"></div></div><div class="ct"><div class="sk line"></div><div class="sk line s"></div></div></div></div>`).join('');
     const skelRows = n => Array.from({ length: n }, () => `<div class="row"><div class="rthumb sk"></div><div class="ct"><div class="sk line"></div><div class="sk line s"></div></div></div>`).join('');
 
     /* ==================== HOME & SMART RECOMMENDATIONS ==================== */
@@ -1095,16 +1157,16 @@
           ${profAvatar(true)}
           <div class="sp" style="min-width:0">
             <h1>${esc(S.set.name || 'Student')}</h1>
-            <p>${esc(S.set.handle || '@tubevault')} • ${saved.size} saved</p>
+            <p>${esc(S.set.handle || '@tubevault')} \u2022 ${saved.size} saved${streakInfo().cur ? ` \u2022 <span class="streak-mini">${flameIc(14)} ${streakInfo().cur}</span>` : ''}</p>
           </div>
-          <button class="ib" data-act="open-analytics" aria-label="Study Analytics" title="Analytics">${ic('chart')}</button>
+          <button class="ib" data-act="open-analytics" aria-label="Study insights" title="Insights">${ic('chart')}</button>
           <button class="ib" data-act="settings" aria-label="Settings" title="Settings">${ic('gear')}</button>
         </div>
 
         <div class="hscroll" style="padding-top:0.25rem;padding-bottom:0.375rem">
           <button class="btn pri" data-act="add">${ic('plus', 18)} Add video</button>
           <button class="btn" data-act="import">${ic('download', 18)} Import playlist</button>
-          <button class="btn" data-act="open-analytics">${ic('chart', 18)} Analytics (${fmtDurHuman(totalStudy)})</button>
+          <button class="btn" data-act="open-analytics">${flameIc(18)} Insights \u00b7 ${fmtDurHuman(totalStudy)}</button>
           <button class="btn" data-act="new-playlist">${ic('list', 18)} New playlist</button>
         </div>
 
@@ -1148,94 +1210,178 @@
     const dayKeys = n => Array.from({ length: n }, (_, i) => todayKey(Date.now() - (n - 1 - i) * 864e5));
     const learnOf = r => Object.entries(r.cats || {}).reduce((a, [c, v]) => a + (learnCat(c) ? v : 0), 0);
 
+    function streakInfo() {
+      let cur = 0, best = 0, run = 0, prev = null;
+      for (let i = 0; i < 400; i++) {
+        const r = S.usage[todayKey(Date.now() - i * 864e5)];
+        if (r && learnOf(r) >= 60) cur++; else if (i > 0) break;
+      }
+      Object.keys(S.usage).sort().forEach(k => {
+        if (learnOf(S.usage[k]) >= 60) {
+          run = prev && Math.round((new Date(k + 'T12:00:00') - new Date(prev + 'T12:00:00')) / 864e5) === 1 ? run + 1 : 1;
+          prev = k; best = Math.max(best, run);
+        }
+      });
+      return { cur, best: Math.max(best, cur) };
+    }
+
     S.anRange = '7d';
     function openAnalytics() {
-      openSub({ kind: 'analytics' }, '<div id="an-page"></div>');
+      openSub({ kind: 'analytics' }, '<div id="an-page" class="an"></div>');
       renderAnalytics();
     }
+    const axisFmt = s => (s >= 3600 ? (s / 3600).toFixed(s % 3600 ? 1 : 0) + 'h' : Math.round(s / 60) + 'm');
     function renderAnalytics() {
       const el = $('an-page');
       if (!el) return;
       saveUsage();
       const range = S.anRange || '7d';
       const n = range === '1d' ? 1 : range === '7d' ? 7 : range === '30d' ? 30 : 365;
+      const emp = () => ({ app: 0, watch: 0, cats: {}, vids: {} });
+      const U = k => S.usage[k] || emp();
       const keys = dayKeys(n), set = new Set(keys);
-      const recs = keys.map(k => ({ k, r: S.usage[k] || { app: 0, watch: 0, cats: {}, vids: {} } }));
+      const sumOf = ks => { const o = { app: 0, watch: 0, learn: 0 }; ks.forEach(k => { const r = U(k); o.app += r.app; o.watch += r.watch; o.learn += learnOf(r); }); return o; };
+      const cur = sumOf(keys);
+      const prev = range === 'all' ? null : sumOf(Array.from({ length: n }, (_, i) => todayKey(Date.now() - (2 * n - 1 - i) * 864e5)));
       const sess = S.sessions.filter(x => set.has(x.d));
-
-      const app = recs.reduce((a, x) => a + x.r.app, 0);
-      const watch = recs.reduce((a, x) => a + x.r.watch, 0);
-      const learn = recs.reduce((a, x) => a + learnOf(x.r), 0);
       const lecture = sess.reduce((a, x) => a + (x.lectureSec || 0), 0);
       const brk = sess.reduce((a, x) => a + (x.breakSec || 0), 0);
+      const longest = sess.reduce((a, x) => Math.max(a, x.lectureSec || 0), 0);
       const vidMap = {}, catMap = {};
-      recs.forEach(x => {
-        Object.entries(x.r.vids || {}).forEach(([id, v]) => { (vidMap[id] = vidMap[id] || { w: 0, l: 0, b: 0, s: 0 }).w += v; });
-        Object.entries(x.r.cats || {}).forEach(([c, v]) => { catMap[c] = (catMap[c] || 0) + v; });
+      keys.forEach(k => {
+        const r = U(k);
+        Object.entries(r.vids || {}).forEach(([id, v]) => { (vidMap[id] = vidMap[id] || { w: 0, l: 0, b: 0, s: 0 }).w += v; });
+        Object.entries(r.cats || {}).forEach(([c, v]) => { catMap[c] = (catMap[c] || 0) + v; });
       });
       sess.forEach(x => { const o = (vidMap[x.v] = vidMap[x.v] || { w: 0, l: 0, b: 0, s: 0 }); o.l += x.lectureSec || 0; o.b += x.breakSec || 0; o.s++; });
-      const vids = Object.entries(vidMap).sort((a, b) => (b[1].w + b[1].l) - (a[1].w + a[1].l)).slice(0, 12);
+      const vids = Object.entries(vidMap).sort((a, b) => (b[1].w + b[1].l) - (a[1].w + a[1].l)).slice(0, 10);
       const cats = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
+      const st = streakInfo();
+      const today = U(todayKey()), goal = (S.set.goal || 120) * 60, tl = learnOf(today), gp = Math.min(100, Math.round((tl / goal) * 100));
+      const focus = lecture + brk ? Math.round((lecture / (lecture + brk)) * 100) : 0;
+      const activeDays = keys.filter(k => U(k).watch > 0).length;
 
-      // streak (days in a row with >= 1 min of learning)
-      let streak = 0;
-      for (let i = 0; i < 365; i++) {
-        const r = S.usage[todayKey(Date.now() - i * 864e5)];
-        if (r && learnOf(r) >= 60) streak++; else if (i > 0) break; else continue;
-      }
-      const today = S.usage[todayKey()] || { watch: 0, cats: {}, app: 0 };
-      const goal = (S.set.goal || 120) * 60, tl = learnOf(today), gp = Math.min(100, Math.round((tl / goal) * 100));
+      const delta = (a, b) => {
+        if (!prev || !(b > 0)) return '';
+        const pc = Math.round(((a - b) / b) * 100);
+        return pc === 0 ? '<em class="dl">same</em>' : `<em class="dl ${pc > 0 ? 'up' : 'dn'}">${ic(pc > 0 ? 'trend' : 'trendd', 12)}${Math.abs(pc)}%</em>`;
+      };
+      const kpi = (icon, col, val, label, sub, dl) => `<div class="an-k" style="--c:${col}"><div class="k-top"><span class="k-ic">${ic(icon, 17)}</span>${dl || ''}</div><b class="tnum">${val}</b><small>${label}</small><span class="k-sub">${sub}</span></div>`;
 
+      // week flame dots
+      const wk = dayKeys(7).map(k => {
+        const hit = learnOf(U(k)) >= 60, d = new Date(k + 'T12:00:00');
+        return `<span class="wd${hit ? ' on' : ''}${k === todayKey() ? ' td' : ''}"><i>${hit ? flameIc(15) : ''}</i><small>${'SMTWTFS'[d.getDay()]}</small></span>`;
+      }).join('');
+
+      // activity chart
       const chartN = range === '30d' || range === 'all' ? 30 : 7;
-      const cd = dayKeys(chartN).map(k => { const r = S.usage[k] || { watch: 0, cats: {} }, l = learnOf(r); return { k, l, o: Math.max(0, r.watch - l), a: (S.usage[k] || {}).app || 0 }; });
-      const mx = Math.max(600, ...cd.map(d => d.l + d.o));
-      const lbl = k => { const d = new Date(k + 'T12:00:00'); return chartN === 7 ? d.toLocaleDateString('en-US', { weekday: 'short' }) : String(d.getDate()); };
-      const avgDay = Math.round(watch / Math.max(1, range === 'all' ? Math.min(365, Object.keys(S.usage).length || 1) : n));
+      const cd = dayKeys(chartN).map(k => { const r = U(k), l = learnOf(r), o = Math.max(0, r.watch - l); return { k, l, o, t: l + o }; });
+      const mx = Math.max(...cd.map(d => d.t), 1);
+      const tops = [900, 1800, 3600, 5400, 7200, 10800, 14400, 21600, 28800, 43200, 86400];
+      const top = tops.find(v => v >= mx) || 86400;
+      const avgLine = cd.reduce((a, d) => a + d.t, 0) / chartN;
+      const lbl = (k, i) => { const d = new Date(k + 'T12:00:00'); return chartN === 7 ? d.toLocaleDateString('en-US', { weekday: 'short' }) : (i % 5 === 0 || i === chartN - 1 ? String(d.getDate()) : ''); };
+      const tipOf = d => `${new Date(d.k + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · Learning ${fmtDurHuman(d.l)} · Other ${fmtDurHuman(d.o)}`;
+      const best = cd.reduce((a, d) => (d.t > a.t ? d : a), { t: 0 });
+      const lastD = cd[cd.length - 1];
 
-      const chips = [['1d', 'Today'], ['7d', '7 days'], ['30d', '30 days'], ['all', 'All time']].map(([v, l]) => `<button class="chip${range === v ? ' on' : ''}" data-act="an-range" data-v="${v}">${l}</button>`).join('');
-      const kpi = (t, v, sub, col) => `<div class="an-card"><small>${t}</small><b class="tnum"${col ? ` style="color:${col}"` : ''}>${v}</b><span>${sub}</span></div>`;
+      // heatmap (12 weeks, Monday-first columns)
+      const HW = 12, hd = new Date(); const dow = (hd.getDay() + 6) % 7;
+      const hkeys = Array.from({ length: HW * 7 }, (_, i) => todayKey(Date.now() - (HW * 7 - 1 - i + (6 - dow)) * 864e5));
+      const hv = hkeys.map(k => learnOf(U(k)));
+      const hmx = Math.max(1, ...hv);
+      const lvl = (v, k) => (k > todayKey() ? -1 : v < 60 ? 0 : v < hmx * 0.25 ? 1 : v < hmx * 0.5 ? 2 : v < hmx * 0.75 ? 3 : 4);
+      const heat = hkeys.map((k, i) => `<i class="hc l${lvl(hv[i], k)}" title="${k}: ${fmtDurHuman(hv[i])}"></i>`).join('');
+      const hdays = hkeys.filter((k, i) => hv[i] >= 60 && k <= todayKey()).length;
+
+      // donut
+      const tot = cats.reduce((a, x) => a + x[1], 0);
+      const topC = cats.slice(0, 5), restC = cats.slice(5).reduce((a, x) => a + x[1], 0);
+      const shades = ['#7c5cff', '#9a82ff', '#b5a3ff', '#cfc4ff', '#e4defe'];
+      const segs = topC.map(([c, v], i) => ({ c, v, col: shades[i] }));
+      if (restC) segs.push({ c: 'Other topics', v: restC, col: 'var(--bg3)' });
+      let acc = 0;
+      const grad = segs.map(x => { const a0 = acc; acc += (x.v / (tot || 1)) * 360; return `${x.col} ${a0.toFixed(1)}deg ${acc.toFixed(1)}deg`; }).join(',');
+
+      const chips = [['1d', 'Today'], ['7d', '7 days'], ['30d', '30 days'], ['all', 'All time']].map(([v, l]) => `<button class="${range === v ? 'on' : ''}" data-act="an-range" data-v="${v}">${l}</button>`).join('');
+      const ins = (icon, col, k, v) => `<div class="an-i" style="--c:${col}"><span>${ic(icon, 16)}</span><div><small>${k}</small><b>${v}</b></div></div>`;
+      const maxV = vids.length ? Math.max(1, ...vids.map(([, v]) => v.w + v.l)) : 1;
+
       el.innerHTML = `
-        ${subHeader('Analytics')}
-        <div class="chips" style="padding-top:0.6rem">${chips}</div>
+        ${subHeader('Insights')}
+        <div class="an-seg">${chips}</div>
 
-        <div class="an-goal">
-          <div class="ring" style="--p:${gp}"><b class="tnum">${gp}%</b></div>
-          <div><h3>Today's learning goal</h3><p>${fmtDurHuman(tl)} of ${fmtDurHuman(goal)} · <span style="color:var(--amber)">🔥 ${streak}-day streak</span></p><button class="link" data-act="goto-goal">Change goal</button></div>
-        </div>
-
-        <div class="an-grid">
-          ${kpi('Time in app', fmtDurHuman(app), `${fmtDurHuman(today.app || 0)} today`)}
-          ${kpi('Watch time', fmtDurHuman(watch), `~${fmtDurHuman(avgDay)} per day`, 'var(--red)')}
-          ${kpi('Learning', fmtDurHuman(learn), watch ? `${Math.round((learn / watch) * 100)}% of watch time` : 'No watch time yet', 'var(--green)')}
-          ${kpi('Other videos', fmtDurHuman(Math.max(0, watch - learn)), 'Music, entertainment…')}
-          ${kpi('Lecture stopwatch', fmtDurHuman(lecture), 'Active study time')}
-          ${kpi('Break time', fmtDurHuman(brk), `${lecture + brk ? Math.round((brk / (lecture + brk)) * 100) : 0}% of sessions`, 'var(--amber)')}
-        </div>
-
-        <div class="an-box">
-          <h3>${chartN}-day trend</h3>
-          <div class="bar-chart${chartN > 7 ? ' dense' : ''}">
-            ${cd.map(d => `<div class="bar-col" title="${d.k}: learning ${fmtDurHuman(d.l)}, other ${fmtDurHuman(d.o)}"><div class="bar-stack"><div class="bar-other" style="height:${(d.o / mx) * 7}rem"></div><div class="bar-study" style="height:${(d.l / mx) * 7}rem"></div></div><small>${lbl(d.k)}</small></div>`).join('')}
+        <section class="an-hero">
+          <div class="hero-main">
+            <div class="hero-ring" style="--p:${gp}"><div><b class="tnum">${gp}%</b><small>of goal</small></div></div>
+            <div class="hero-txt">
+              <small>TODAY'S LEARNING</small>
+              <b class="tnum">${fmtDurHuman(tl)}</b>
+              <span>Goal ${fmtDurHuman(goal)} · <button class="link" data-act="goto-goal">Change</button></span>
+            </div>
           </div>
-          <p class="hint" style="margin-top:0.5rem"><i class="dot" style="background:var(--red)"></i> Learning &nbsp; <i class="dot" style="background:var(--bg3)"></i> Other &nbsp; (tap-and-hold a bar for exact time)</p>
+          <div class="hero-streak">
+            <div class="hs-flame">${flameIc(26)}</div>
+            <div><b class="tnum">${st.cur}</b><small>day streak</small></div>
+            <div class="hs-best"><b class="tnum">${st.best}</b><small>best</small></div>
+          </div>
+          <div class="hero-week">${wk}</div>
+        </section>
+
+        <div class="an-kpis">
+          ${kpi('eye', 'var(--a1)', fmtDurHuman(cur.watch), 'Watch time', `~${fmtDurHuman(Math.round(cur.watch / Math.max(1, range === 'all' ? activeDays || 1 : n)))} / day`, delta(cur.watch, prev && prev.watch))}
+          ${kpi('brain', 'var(--a4)', fmtDurHuman(cur.learn), 'Learning', cur.watch ? `${Math.round((cur.learn / cur.watch) * 100)}% of watching` : 'Nothing yet', delta(cur.learn, prev && prev.learn))}
+          ${kpi('target', 'var(--a5)', focus + '%', 'Focus score', '')}
+          ${kpi('coffee', 'var(--a3)', fmtDurHuman(brk), 'Break time', `${lecture + brk ? 100 - focus : 0}% of study timer`)}
+          ${kpi('clock', 'var(--a2)', fmtDurHuman(cur.app), 'Time in app', `${fmtDurHuman(today.app || 0)} today`, delta(cur.app, prev && prev.app))}
+          ${kpi('layers', 'var(--a6)', String(Object.keys(vidMap).length), 'Videos', `${activeDays} active day${activeDays === 1 ? '' : 's'}`)}
         </div>
 
-        <div class="an-box">
-          <h3>Time by category</h3>
-          ${cats.length ? cats.map(([c, sec]) => {
-            const pct = watch ? Math.round((sec / watch) * 100) : 0;
-            return `<div class="cat-row"><div class="cat-top"><span>${esc(c)} <em class="tag ${learnCat(c) ? 'l' : 'o'}">${learnCat(c) ? 'Learning' : 'Other'}</em></span><span class="tnum">${fmtDurHuman(sec)} · ${pct}%</span></div><div class="cat-track"><div class="cat-fill" style="width:${pct}%;background:hsl(${hue(c)} 70% 55%)"></div></div></div>`;
-          }).join('') : '<p class="hint">Watch a video to see where your time goes.</p>'}
-        </div>
+        <section class="an-card2">
+          <div class="c-h"><h3>Daily activity</h3><span class="c-s">${chartN} days</span></div>
+          <div class="an-tip" id="an-tip">${tipOf(lastD)}</div>
+          <div class="an-chart${chartN > 7 ? ' dense' : ''}">
+            <div class="grid">${[3, 2, 1].map(i => `<div style="bottom:${(i / 3) * 100}%"><span>${axisFmt(Math.round((top / 3) * i))}</span></div>`).join('')}<div class="avg" style="bottom:${Math.min(100, (avgLine / top) * 100)}%"><span>avg</span></div></div>
+            <div class="bars">${cd.map((d, i) => `<button class="bc${d.k === todayKey() ? ' sel' : ''}" data-act="an-bar" data-tip="${esc(tipOf(d))}"><div class="bs" style="height:${Math.max(1.5, (d.t / top) * 100)}%"><i class="bo" style="flex:${d.o} 0 0"></i><i class="bl" style="flex:${d.l} 0 0"></i></div><small>${lbl(d.k, i)}</small></button>`).join('')}</div>
+          </div>
+          <div class="an-leg"><span><i style="background:var(--a1)"></i>Learning</span><span><i style="background:var(--a2)"></i>Other</span><span><i class="ln"></i>Average</span></div>
+          ${best.t ? `<p class="an-note">${ic('bolt', 14)} Best day: <b>${new Date(best.k + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' })}</b> with ${fmtDurHuman(best.t)} watched.</p>` : ''}
+        </section>
 
-        <div class="an-box">
-          <h3>Videos you spent time on</h3>
-          ${vids.length ? vids.map(([id, st]) => {
+        <section class="an-card2">
+          <div class="c-h"><h3>Study vs break</h3><span class="c-s">timer sessions</span></div>
+          ${lecture + brk ? `<div class="split"><i style="flex:${lecture};background:var(--a1)"></i><i style="flex:${brk};background:var(--a3)"></i></div>
+          <div class="split-l"><div><span class="dot" style="background:var(--a1)"></span> Lecture <b class="tnum">${fmtDurHuman(lecture)}</b></div><div><span class="dot" style="background:var(--a3)"></span> Break <b class="tnum">${fmtDurHuman(brk)}</b></div></div>` : '<p class="hint">Start a video and use the study timer — your lecture and break split shows up here.</p>'}
+          <div class="an-ins">
+            ${ins('timer', 'var(--a1)', 'Longest lecture', fmtDurHuman(longest))}
+            ${ins('layers', 'var(--a5)', 'Sessions', String(sess.length))}
+            ${ins('flame', 'var(--a3)', 'Best streak', st.best + ' day' + (st.best === 1 ? '' : 's'))}
+            ${ins('calendar', 'var(--a4)', 'Avg session', sess.length ? fmtDurHuman(Math.round(lecture / sess.length)) : '0s')}
+          </div>
+        </section>
+
+        <section class="an-card2">
+          <div class="c-h"><h3>Consistency</h3><span class="c-s">${hdays} learning day${hdays === 1 ? '' : 's'} in 12 weeks</span></div>
+          <div class="heat"><div class="hdow"><span>M</span><span></span><span>W</span><span></span><span>F</span><span></span><span>S</span></div><div class="hgrid">${heat}</div></div>
+          <div class="heat-leg">Less <i class="hc l0"></i><i class="hc l1"></i><i class="hc l2"></i><i class="hc l3"></i><i class="hc l4"></i> More</div>
+        </section>
+
+        <section class="an-card2">
+          <div class="c-h"><h3>Where your time goes</h3><span class="c-s">by topic</span></div>
+          ${segs.length ? `<div class="donut-row"><div class="donut" style="background:conic-gradient(${grad})"><div><b class="tnum">${fmtDurHuman(tot)}</b><small>total</small></div></div>
+          <div class="d-leg">${segs.map(x => `<div><i style="background:${x.col}"></i><span class="clamp1">${esc(x.c)}</span><b class="tnum">${Math.round((x.v / tot) * 100)}%</b></div>`).join('')}</div></div>
+          <div class="cat-list">${cats.slice(0, 8).map(([c, sec]) => `<div class="cat-row"><div class="cat-top"><span>${esc(c)} <em class="tag ${learnCat(c) ? 'l' : 'o'}">${learnCat(c) ? 'Learning' : 'Other'}</em></span><span class="tnum">${fmtDurHuman(sec)}</span></div><div class="cat-track"><div class="cat-fill" style="width:${Math.round((sec / (cats[0][1] || 1)) * 100)}%;background:var(--a1)"></div></div></div>`).join('')}</div>` : '<p class="hint">Watch a video to see where your time goes.</p>'}
+        </section>
+
+        <section class="an-card2">
+          <div class="c-h"><h3>Most-watched videos</h3><span class="c-s">top ${vids.length || 0}</span></div>
+          ${vids.length ? vids.map(([id, v], i) => {
             const m = M(id);
-            return `<div class="row an-vid" data-act="play" data-id="${id}" data-ctx="x"><img src="${thumb(id)}" alt=""><div class="ct"><h3 class="clamp2">${esc(m.title)}</h3><p>Watched <b>${fmtDurHuman(st.w)}</b>${st.s ? ` · Lecture ${fmtDurHuman(st.l)} · Break ${fmtDurHuman(st.b)} · ${st.s} session${st.s === 1 ? '' : 's'}` : ''}</p></div></div>`;
+            return `<div class="an-vid2" data-act="play" data-id="${id}" data-ctx="x"><span class="rk">${i + 1}</span><div class="vt"><img src="${thumb(id)}" loading="lazy" alt=""></div><div class="ct"><h4 class="clamp2">${esc(m.title)}</h4><div class="vbar"><i style="width:${Math.max(4, Math.round(((v.w + v.l) / maxV) * 100))}%"></i></div><p>Watched <b>${fmtDurHuman(v.w)}</b>${v.s ? ` · Lecture ${fmtDurHuman(v.l)} · Break ${fmtDurHuman(v.b)}` : ''}</p></div></div>`;
           }).join('') : '<p class="hint">No videos tracked in this period.</p>'}
-        </div>
-        <p class="hint" style="padding:0 1rem 1.5rem">Time is tracked on this device only. Watch time pauses during ads and when the app is in the background.</p>
+        </section>
+        <p class="hint" style="padding:0 1rem 1.5rem;text-align:center">Tracked on this device only. Time pauses during ads and when the app is in the background.</p>
       `;
     }
 
@@ -1319,7 +1465,7 @@
             S.reordering = true;
             if (navigator.vibrate) navigator.vibrate(25);
             renderPlPage();
-            toast('Reorder mode active — use ▲ / ▼ to move');
+            toast('Reorder mode on \u2014 use the arrows to move');
           }
         }, 520);
       }, { passive: true });
@@ -1732,10 +1878,34 @@
     const tog = (k, on) => `<button class="sw${on ? ' on' : ''}" data-act="set-tog" data-k="${k}" role="switch" aria-checked="${on}"><i></i></button>`;
     const srow = (t, sub, right) => `<div class="srow2"><div class="st"><b>${t}</b>${sub ? `<small>${sub}</small>` : ''}</div>${right}</div>`;
 
+    document.addEventListener('toggle', e => { if (e.target && e.target.id === 'learned') S.learnedOpen = e.target.open; }, true);
     function openSettings(focus) {
       openSub({ kind: 'settings' }, '<div id="setpage"></div>', false);
       renderSettings();
       if (focus) setTimeout(() => { const t = $('set-' + focus); if (t) t.scrollIntoView({ block: 'start' }); }, 60);
+    }
+    function learnedHtml() {
+      const pf = profile(), hm = histMap();
+      const topCats = Object.entries(pf.cat).sort((a, b) => b[1] - a[1]).slice(0, 6);
+      const topChs = Object.entries(pf.ch).sort((a, b) => b[1] - a[1]).slice(0, 6);
+      const cmax = topCats.length ? topCats[0][1] : 1, hmax = topChs.length ? topChs[0][1] : 1;
+      const hits = Object.entries(S.set.hits || {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
+      const qs = ld('tv3_q', []).slice(0, 8);
+      const recent = S.hist.slice(0, 6);
+      const watchSec = Object.values(S.usage).reduce((a, r) => a + (r.watch || 0), 0);
+      const likes = (PL('liked') || { items: [] }).items.length;
+      const saved = new Set(); S.playlists.filter(p => p.id !== 'liked').forEach(p => p.items.forEach(i => saved.add(i)));
+      const nn = Object.values(S.notes).reduce((a, l) => a + l.length, 0);
+      const stat = (l, v) => `<div class="lr-s"><b class="tnum">${v}</b><small>${l}</small></div>`;
+      const bars = (arr, mx, col) => arr.length ? arr.map(([k, v]) => `<div class="lr-b"><span class="clamp1">${esc(k)}</span><div><i style="width:${Math.max(6, Math.round((v / mx) * 100))}%;background:${col || `hsl(${hue(k)} 72% 58%)`}"></i></div></div>`).join('') : '<p class="hint">Nothing learned yet.</p>';
+      return `
+        <div class="lr-stats">${stat('Videos watched', S.hist.length)}${stat('Watch time', fmtDurHuman(watchSec))}${stat('Liked', likes)}${stat('Saved', saved.size)}${stat('Notes', nn)}${stat('Channels followed', S.subs.length)}</div>
+        <h5>Topics you like</h5>${bars(topCats, cmax)}
+        <h5>Favourite channels</h5>${bars(topChs, hmax, 'var(--a2)')}
+        <h5>Topic chips you tapped</h5>${hits.length ? `<div class="lr-tags">${hits.map(([k, v]) => `<span>${esc(k)} <b>${v}</b></span>`).join('')}</div>` : '<p class="hint">None yet.</p>'}
+        <h5>Recent searches</h5>${qs.length ? `<div class="lr-tags">${qs.map(x => `<span>${esc(x)}</span>`).join('')}</div>` : '<p class="hint">None yet.</p>'}
+        <h5>Recently watched</h5>${recent.length ? recent.map(h => `<div class="lr-v"><img src="${thumb(h.v)}" alt=""><span class="clamp2">${esc(M(h.v).title)}</span><small>${pctOf(h)}%</small></div>`).join('') : '<p class="hint">Nothing watched yet.</p>'}
+        <p class="hint" style="margin-top:.7rem">Your playlists, notes and subscriptions also feed recommendations. Remove them from the Library if you want them gone too.</p>`;
     }
     function renderSettings() {
       const el = $('setpage');
@@ -1756,7 +1926,7 @@
           ${seg('set-theme', th, [['dark', 'Dark'], ['amoled', 'AMOLED'], ['light', 'Light']])}
           <div class="ui-row"><span>Display size</span><b class="tnum">${ui === null ? 'Auto' : Math.round(ui * 100) + '%'} <small>(now ${Math.round(curUi * 100)}%)</small></b></div>
           <input type="range" id="ui-range" min="0.85" max="1.5" step="0.05" value="${ui === null ? curUi.toFixed(2) : ui}" aria-label="Display size">
-          <div class="ui-ends"><span>Smaller</span><button class="link" data-act="ui-auto">${ui === null ? 'Auto ✓' : 'Use Auto'}</button><span>Larger</span></div>
+          <div class="ui-ends"><span>Smaller</span><button class="link" data-act="ui-auto">${ui === null ? 'Auto (on)' : 'Use Auto'}</button><span>Larger</span></div>
         </div>
 
         <div class="set-sec"><h4>Player</h4>
@@ -1791,6 +1961,15 @@
           </details>
         </div>
 
+        <div class="set-sec" id="set-privacy"><h4>Privacy &amp; what the app knows</h4>
+          <p class="hint" style="margin:0 0 .7rem">Everything is stored only on this phone. Recommendations are built from the signals below \u2014 you can read them and wipe them any time.</p>
+          <button class="btn red" style="width:100%" data-act="forget-all">${ic('trash', 17)} Delete everything about you</button>
+          <details class="learned" id="learned"${S.learnedOpen ? ' open' : ''}>
+            <summary><span>${ic('eye', 18)} What TubeVault has learned about you</span><i>${ic('chev', 18)}</i></summary>
+            ${learnedHtml()}
+          </details>
+        </div>
+
         <div class="set-sec"><h4>Your data</h4>
           <div class="srow"><button class="btn grow" data-act="backup">${ic('download', 17)} Back up</button><button class="btn grow" data-act="restore">${ic('plus', 17)} Restore</button></div>
           <input id="restore-in" type="file" accept="application/json,.json" hidden>
@@ -1800,7 +1979,7 @@
 
         <div class="set-sec"><h4>Install &amp; share from YouTube</h4>
           <button class="btn red" style="width:100%" data-act="install-pwa">${ic('download', 17)} Install TubeVault</button>
-          <p class="hint">Once installed from an https link, open any video in the YouTube app → <b>Share → TubeVault</b> and it lands in Watch later.</p>
+          <p class="hint">Once installed from an https link, open any video in the YouTube app, tap <b>Share</b>, pick <b>TubeVault</b>. It is saved to Watch later instantly and you are sent straight back to YouTube.</p>
         </div>
         <p class="hint" style="text-align:center;padding:0.5rem 0 1.5rem">TubeVault · distraction-free learning</p>
       `;
@@ -1901,26 +2080,41 @@
     }
 
     /* Ad handling: YouTube's IFrame player is cross-origin, so a page can never click its Skip button.
-       What we can do: notice an ad is playing, open the player to touches so the native Skip button
-       works, and keep ad seconds out of your study/watch timers and saved progress. */
-    S.ad = false;
+       What we can do: notice an ad is playing, hand every touch straight to YouTube's own player (so its
+       Skip button works), and keep ad seconds out of your study/watch timers and saved progress.
+       An ad is detected when (a) the player reports another video / a much shorter duration, or
+       (b) the clock says "playing" but the video position is frozen (ads never move the main position). */
+    S.ad = false; S.adManual = 0;
+    let adLastT = -1, adFrozen = 0, adMoving = 0;
     function setAd(on) {
       if (on === S.ad) return;
       S.ad = on;
       $('pv').classList.toggle('ad', on);
-      if (on) showCtrls();
+      if (on) { $('ctrl').classList.remove('show'); $('player-layer').classList.remove('hud-on'); }
+      else showCtrls();
     }
-    function detectAd() {
+    function detectAd(fromEvent) {
       if (!playerReady || !yt || !S.cur) return false;
-      let ad = false;
+      let hard = false, t = 0;
       try {
         const vd = yt.getVideoData && yt.getVideoData();
         const d = yt.getDuration && yt.getDuration();
+        t = yt.getCurrentTime() || 0;
         const exp = M(S.cur).dur;
-        if (vd && vd.video_id && vd.video_id !== S.cur) ad = true;
-        else if (exp > 240 && d > 0 && d < Math.min(180, exp * 0.6)) ad = true;
-        else if (yt.getAdState && yt.getAdState() === 1) ad = true;
+        if (vd && vd.video_id && vd.video_id !== S.cur) hard = true;
+        else if (exp > 240 && d > 0 && d < Math.min(180, exp * 0.6)) hard = true;
+        else if (yt.getAdState && yt.getAdState() === 1) hard = true;
       } catch (e) {}
+      if (!fromEvent) {
+        if (S.playing && !isDrag) {
+          if (Math.abs(t - adLastT) > 0.2) { adMoving++; adFrozen = 0; } else { adFrozen++; adMoving = 0; }
+        }
+        adLastT = t;
+      }
+      let ad = hard || adFrozen >= 3;
+      if (!ad && S.ad && adMoving < 2 && S.playing) ad = true;            // stay in ad mode until the video visibly moves again
+      if (S.adManual > Date.now()) { if (adMoving >= 2) S.adManual = 0; else ad = true; }
+      if (!S.playing && !fromEvent && !hard) ad = S.ad;                   // paused: keep whatever we decided
       setAd(ad);
       return ad;
     }
@@ -1928,7 +2122,8 @@
     function onState(e) {
       const st = e.data;
       S.playing = st === 1;
-      if (st === 1) detectAd();
+      if (st === 0) { adFrozen = 0; adMoving = 0; setAd(false); }
+      if (st === 1) detectAd(true);
       if (st === 1 && !S.ad) {
         try {
           const d = yt.getDuration();
@@ -1940,7 +2135,7 @@
         startTick();
         showCtrls();
       }
-      if (st === 2) {
+      if (st === 2 && !S.ad) {
         saveProg();
         $('ctrl').classList.add('show');
         $('player-layer').classList.add('hud-on');
@@ -2057,6 +2252,7 @@
       if (start < 3) start = 0;
 
       setAd(false);
+      adFrozen = 0; adMoving = 0; adLastT = -1; S.adManual = 0;
       S.cur = id;
       S.t = start;
       S.d = (h && h.t) || M(id).dur || 0;
@@ -2089,6 +2285,7 @@
       else stopPlayer();
     }
     function minimize() {
+      purgeKind('player');
       exitFs();
       saveProg();
       $('player-layer').className = 'on mini';
@@ -2101,6 +2298,7 @@
       $('player-layer').className = 'on ' + targetMode + ' hud-on';
       S.pmode = targetMode;
       document.body.classList.remove('has-mini');
+      purgeKind('player');
       pushLayer(playerClose, 'player');
       updateWatchPage();
       showCtrls();
@@ -2118,6 +2316,7 @@
     }
 
     function stopPlayer() {
+      purgeKind('player');
       exitFs();
       saveProg();
       flushStudySession();
@@ -2154,7 +2353,6 @@
       $('wp-chan').textContent = m.channel || 'YouTube';
       $('wp-meta').textContent = [m.views, m.pub, m.cat].filter(Boolean).join(' • ');
       $('wp-av').innerHTML = avatar(m.channel);
-      $('wp-desc').textContent = m.desc || `${m.title}\nChannel: ${m.channel}\nCategory: ${m.cat}`;
 
       const subBtn = $('wp-sub-btn');
       const subbed = isSubscribed(m.channel);
@@ -2172,9 +2370,13 @@
       $('b-more').innerHTML = ic('more', 19) + '<span>More</span>';
       $('b-like').classList.toggle('on', inPl('liked', id));
       $('b-save').classList.toggle('on', S.playlists.some(p => p.id !== 'liked' && p.items.includes(id)));
+      $('b-save').querySelector('span').textContent = S.playlists.some(p => p.id !== 'liked' && p.items.includes(id)) ? 'Saved' : 'Save';
+      $('ad-min').innerHTML = ic('chev', 24);
 
       $('notes-n').textContent = nl.length;
-      $('notes-prev').textContent = nl.length ? nl[0].text : 'Pin a timestamped note while watching…';
+      $('notes-prev').textContent = nl.length ? nl[0].text.replace(/\*\*|==|`/g, '').replace(/^\s*- \[[ x]\]\s*/gim, '').replace(/\n+/g, ' \u00b7 ') : 'Pin a timestamped note while watching\u2026';
+      $('notes-ic').innerHTML = ic('note', 17);
+      syncNotesCard();
       $('c-min').innerHTML = ic(S.set.playerMode !== 'full' ? 'chev' : 'close', 26);
       $('nbtn').innerHTML = ic('chev', 26);
       $('c-auto').innerHTML = `<span class="tg${S.set.autoplay !== false ? ' on' : ''}"><i></i></span>`;
@@ -2191,6 +2393,7 @@
         $('th-fs').innerHTML = ic('collapse', 20);
         $('th-like').innerHTML = ic('like', 22);
         $('th-like').classList.toggle('on', inPl('liked', id));
+        $('th-like').innerHTML = ic('like', 22);
         $('th-note').innerHTML = ic('note', 21);
         $('th-more').innerHTML = ic('more', 21);
         $('th-queue').innerHTML = ic('queue', 22);
@@ -2212,6 +2415,14 @@
       updatePlayUI();
     }
 
+    function syncNotesCard() {
+      const b = $('notes-box'), c = $('notes-card');
+      if (!b || !c) return;
+      const open = !b.hidden;
+      c.classList.toggle('open', open);
+      c.setAttribute('aria-expanded', open ? 'true' : 'false');
+      $('notes-chev').innerHTML = ic('chev', 20);
+    }
     function renderUpNext() {
       const el = $('upnext');
       if (!el) return;
@@ -2268,17 +2479,20 @@
       }).join('');
     }
 
-    function noteCard(vid, n, jump) {
+    function noteCard(vid, n, jump, head) {
       const t = NT[n.type] || NT.note;
+      const m = head ? M(vid) : null;
       return `<div class="ncard2" style="--nc:${t.c}">
+        ${head ? `<div class="nc-vid" data-act="play" data-id="${vid}" data-ctx="x"><img src="${thumb(vid)}" loading="lazy" alt=""><span class="clamp1">${esc(m.title)}</span></div>` : ''}
         <div class="nc-top">
-          <span class="nc-type">${t.n}</span>
-          <button class="tsb tnum" data-act="${jump ? 'note-go' : 'seek-ts'}" data-id="${vid}" data-ts="${n.timestamp}">${fmt(n.timestamp)}</button>
+          <span class="nc-type"><i class="nc-dot"></i>${t.n}</span>
+          <button class="tsb tnum" data-act="${jump ? 'note-go' : 'seek-ts'}" data-id="${vid}" data-ts="${n.timestamp}">${ic('play', 10)} ${fmt(n.timestamp)}</button>
           <span class="sp"></span>
           <button class="ib nc-star${n.star ? ' on' : ''}" data-act="note-star" data-id="${vid}" data-nid="${n.id}" aria-label="Star">${ic('star', 18)}</button>
           <button class="ib" data-act="note-menu" data-id="${vid}" data-nid="${n.id}" aria-label="More">${ic('more', 18)}</button>
         </div>
         <div class="nc-body">${md(n.text, vid, n.id)}</div>
+        ${n.at ? `<div class="nc-foot">${ago(n.at)}${n.edited ? ' · edited' : ''}</div>` : ''}
       </div>`;
     }
 
@@ -2289,7 +2503,7 @@
     function filterChips(list) {
       const types = [...new Set(list.map(n => n.type || 'note'))];
       const chip = (v, l) => `<button class="chip sm${S.nfilter === v ? ' on' : ''}" data-act="note-filter" data-v="${v}">${l}</button>`;
-      return `<div class="np-filters">${chip('all', 'All')}${list.some(n => n.star) ? chip('star', '★ Starred') : ''}${types.map(t => chip(t, (NT[t] || NT.note).n)).join('')}</div>`;
+      return `<div class="np-filters">${chip('all', 'All')}${list.some(n => n.star) ? chip('star', ic('star', 12) + ' Starred') : ''}${types.map(t => chip(t, (NT[t] || NT.note).n)).join('')}</div>`;
     }
 
     function notesPanelHtml(vid) {
@@ -2299,7 +2513,7 @@
         <div class="np-head"><b>Notes <span class="cnt">${all.length}</span></b>
           <div class="np-btns"><button class="btn sm pri" data-act="note-new">${ic('plus', 16)} Add note</button>${all.length ? `<button class="btn sm" data-act="note-export" data-id="${vid}">${ic('share', 16)} Export</button>` : ''}</div>
         </div>
-        <div class="np-sum"><span class="lbl" style="margin-top:0.2rem">Summary — what did this lecture teach you?</span>
+        <div class="np-sum"><span class="lbl" style="margin-top:0.2rem">${ic('sparkle', 12)} Summary \u2014 what did this lecture teach you?</span>
           <textarea id="nsum" data-vid="${vid}" rows="2" placeholder="Write the 2–3 lines you would tell a friend…">${esc(S.nsum[vid] || '')}</textarea></div>
         ${all.length ? filterChips(all) : ''}
         <div class="np-list">${sorted.length ? sorted.map(n => noteCard(vid, n)).join('') : `<p class="hint" style="padding:0.4rem 0">${all.length ? 'No notes match this filter.' : 'No notes yet. Tap “Add note” — the video pauses and the timestamp is pinned for you.'}</p>`}</div>`;
@@ -2332,9 +2546,9 @@
         <div class="ne-types">${Object.keys(NT).map(k => `<button class="chip sm${NE.type === k ? ' on' : ''}" style="--nc:${NT[k].c}" data-act="ne-type" data-v="${k}">${NT[k].n}</button>`).join('')}</div>
         <div class="ne-tools">
           <button data-act="ne-fmt" data-f="b"><b>B</b></button><button data-act="ne-fmt" data-f="i"><i>I</i></button>
-          <button data-act="ne-fmt" data-f="code">&lt;/&gt;</button><button data-act="ne-fmt" data-f="hl">▮</button>
-          <button data-act="ne-fmt" data-f="bul">• List</button><button data-act="ne-fmt" data-f="chk">☑ Task</button>
-          <button data-act="ne-fmt" data-f="quo">❝</button><button data-act="ne-fmt" data-f="hd">H</button>
+          <button data-act="ne-fmt" data-f="code">&lt;/&gt;</button><button data-act="ne-fmt" data-f="hl" aria-label="Highlight">${ic('hl', 16)}</button>
+          <button data-act="ne-fmt" data-f="bul" aria-label="List">${ic('bul', 16)}</button><button data-act="ne-fmt" data-f="chk" aria-label="Task">${ic('task', 16)}</button>
+          <button data-act="ne-fmt" data-f="quo" aria-label="Quote">${ic('quote', 15)}</button><button data-act="ne-fmt" data-f="hd">H</button>
         </div>
         <textarea id="ne-text" rows="6" placeholder="Write your note… use the toolbar for bold, lists and checklists"></textarea>
         <div class="ne-tpl"><span>Templates:</span>${[['def', 'Definition'], ['formula', 'Formula'], ['steps', 'Steps'], ['qa', 'Q & A'], ['cornell', 'Cornell']].map(t => `<button class="chip sm" data-act="ne-tpl" data-v="${t[0]}">${t[1]}</button>`).join('')}</div>
@@ -2394,27 +2608,56 @@
     let NE_EXPORT = null;
 
     /* ---- Notes page (Library) ---- */
-    S.npq = '';
-    function openNotes() { openSub({ kind: 'notes' }, '<div id="notespage"></div>'); renderNotesPage(); }
+    S.npq = ''; S.npView = 'video'; S.npCol = {};
+    function openNotes() { openSub({ kind: 'notes' }, '<div id="notespage" class="np"></div>'); renderNotesPage(); }
     function renderNotesPage() {
       const el = $('notespage');
       if (!el) return;
       const q = (S.npq || '').toLowerCase();
       const allIds = Object.keys(S.notes).filter(id => S.notes[id] && S.notes[id].length);
-      const flat = allIds.flatMap(id => S.notes[id]);
-      const groups = allIds.map(id => {
-        const m = M(id);
-        const list = filterNotes(S.notes[id]).filter(n => !q || n.text.toLowerCase().includes(q) || m.title.toLowerCase().includes(q)).sort((a, b) => a.timestamp - b.timestamp);
-        return { id, m, list };
-      }).filter(g => g.list.length);
+      const flat = allIds.flatMap(id => S.notes[id].map(n => ({ id, n })));
+      const stars = flat.filter(x => x.n.star).length;
+      let tAll = 0, tDone = 0;
+      flat.forEach(x => String(x.n.text || '').split('\n').forEach(l => { const m = /^\s*- \[( |x)\]/i.exec(l); if (m) { tAll++; if (m[1].toLowerCase() === 'x') tDone++; } }));
+      const f = S.nfilter;
+      const ok = x => (f === 'all' || (f === 'star' ? x.n.star : (x.n.type || 'note') === f)) && (!q || x.n.text.toLowerCase().includes(q) || M(x.id).title.toLowerCase().includes(q));
+      const counts = {}; flat.forEach(x => { const t = x.n.type || 'note'; counts[t] = (counts[t] || 0) + 1; });
+      const chip = (v, l, c, col) => `<button class="chip sm${f === v ? ' on' : ''}" ${col ? `style="--nc:${col}"` : ''} data-act="note-filter" data-v="${v}">${l}${c != null ? `<em>${c}</em>` : ''}</button>`;
+      const chips = `<div class="np-filters">${chip('all', 'All', flat.length)}${stars ? chip('star', ic('star', 12) + ' Starred', stars) : ''}${Object.keys(counts).map(t => chip(t, (NT[t] || NT.note).n, counts[t], (NT[t] || NT.note).c)).join('')}</div>`;
       const hadFocus = document.activeElement && document.activeElement.id === 'np-q';
-      el.innerHTML = subHeader('Your notes', allIds.length ? `<button class="btn sm" data-act="note-export-all">${ic('share', 16)} Export</button>` : '') +
-        (allIds.length ? `<div class="sbox">${ic('search', 20)}<input id="np-q" placeholder="Search all notes" value="${esc(S.npq)}" autocomplete="off"></div>${filterChips(flat)}` : '') +
-        (groups.length ? groups.map(g => `
-          <div class="nvid" data-act="play" data-id="${g.id}" data-ctx="x"><img src="${thumb(g.id)}" alt=""><span class="clamp2">${esc(g.m.title)}<small>${g.list.length} note${g.list.length === 1 ? '' : 's'} · ${esc(g.m.channel)}</small></span></div>
-          ${S.nsum[g.id] ? `<div class="nsum-box"><b>Summary</b>${esc(S.nsum[g.id])}</div>` : ''}
-          <div class="np-list" style="padding:0 0.9rem">${g.list.map(n => noteCard(g.id, n, true)).join('')}</div>`).join('')
-          : `<div class="empty">${allIds.length ? 'No notes match.' : 'No notes yet. Open any video and tap Notes to pin timestamped notes, key points, formulas and doubts.'}</div>`);
+      let body = '';
+      if (S.npView === 'latest') {
+        const list = flat.filter(ok).sort((a, b) => (b.n.at || 0) - (a.n.at || 0));
+        body = list.length ? `<div class="np-list" style="padding:0 0.9rem">${list.map(x => noteCard(x.id, x.n, true, true)).join('')}</div>` : '';
+      } else {
+        const groups = allIds.map(id => ({ id, m: M(id), list: flat.filter(x => x.id === id && ok(x)).map(x => x.n).sort((a, b) => a.timestamp - b.timestamp) })).filter(g => g.list.length)
+          .sort((a, b) => Math.max(...b.list.map(n => n.at || 0)) - Math.max(...a.list.map(n => n.at || 0)));
+        body = groups.map(g => `
+          <section class="ng${S.npCol[g.id] ? ' col' : ''}">
+            <div class="ng-head" data-act="ng-toggle" data-id="${g.id}">
+              <div class="ng-th" data-act="play" data-id="${g.id}" data-ctx="x"><img src="${thumb(g.id)}" loading="lazy" alt=""><span>${ic('play', 16)}</span></div>
+              <div class="ng-t"><h3 class="clamp2">${esc(g.m.title)}</h3><p>${esc(g.m.channel)} · ${g.list.length} note${g.list.length === 1 ? '' : 's'}</p></div>
+              <span class="ng-chev">${ic('chev', 20)}</span>
+            </div>
+            <div class="ng-body">
+              ${S.nsum[g.id] ? `<div class="nsum-box"><b>${ic('sparkle', 12)} Summary</b>${esc(S.nsum[g.id])}</div>` : ''}
+              <div class="tl">${g.list.map(n => `<div class="tl-i" style="--nc:${(NT[n.type] || NT.note).c}"><i class="tl-n"></i>${noteCard(g.id, n, true)}</div>`).join('')}</div>
+            </div>
+          </section>`).join('');
+      }
+      const none = !body;
+      el.innerHTML = subHeader('Notes', allIds.length ? `<button class="btn sm" data-act="note-export-all">${ic('share', 16)} Export</button>` : '') + (allIds.length ? `
+        <section class="np-hero">
+          <div class="nh-stat" style="--c:var(--a5)"><span>${ic('note', 16)}</span><b class="tnum">${flat.length}</b><small>Notes</small></div>
+          <div class="nh-stat" style="--c:var(--a1)"><span>${ic('layers', 16)}</span><b class="tnum">${allIds.length}</b><small>Videos</small></div>
+          <div class="nh-stat" style="--c:var(--a3)"><span>${ic('star', 16)}</span><b class="tnum">${stars}</b><small>Starred</small></div>
+          <div class="nh-stat" style="--c:var(--a4)"><span>${ic('task', 16)}</span><b class="tnum">${tAll ? tDone + '/' + tAll : '0'}</b><small>Tasks done</small></div>
+        </section>
+        ${tAll ? `<div class="np-prog"><div><span>Revision progress</span><b class="tnum">${Math.round((tDone / tAll) * 100)}%</b></div><div class="pbar"><i style="width:${(tDone / tAll) * 100}%"></i></div></div>` : ''}
+        <div class="sbox">${ic('search', 20)}<input id="np-q" placeholder="Search notes, formulas, videos…" value="${esc(S.npq)}" autocomplete="off"></div>
+        ${chips}
+        <div class="seg np-view"><button class="${S.npView === 'video' ? 'on' : ''}" data-act="np-view" data-v="video">By video</button><button class="${S.npView === 'latest' ? 'on' : ''}" data-act="np-view" data-v="latest">Latest first</button></div>` : '') +
+        (none ? `<div class="np-empty"><div class="emp-ic">${ic('note', 30)}</div><h3>${allIds.length ? 'No notes match' : 'Your notes live here'}</h3><p>${allIds.length ? 'Try another search or filter.' : 'Open any video, tap <b>Notes</b> and pin timestamped notes, key points, formulas and doubts. They\u2019ll be organised by video here.'}</p></div>` : body) + '<div style="height:1.5rem"></div>';
       if (hadFocus) { const i = $('np-q'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
     }
 
@@ -2618,15 +2861,19 @@
       chip(el) { S.chip = el.dataset.v; if (S.chip !== 'All') { S.set.hits[S.chip] = (S.set.hits[S.chip] || 0) + 1; sv(K.set, S.set); } renderChips(); loadHome(); window.scrollTo(0, 0); },
       'goto-api'() { openSettings('api'); },
       retry() { loadHome(); },
-      'home-top'() { if (subOpen) closeSub(); setTab('home'); if (S.chip !== 'All') { S.chip = 'All'; renderChips(); loadHome(); } window.scrollTo({ top: 0, behavior: 'smooth' }); },
-      'tab-home'() { if (subOpen) closeSub(); if (S.tab === 'home') { window.scrollTo({ top: 0, behavior: 'smooth' }); return; } setTab('home'); },
-      'tab-subs'() { if (subOpen) closeSub(); setTab('subs'); },
-      'tab-library'() { if (subOpen) closeSub(); setTab('library'); },
+      'home-top'() { closeSheet(); closeSub(); setTab('home'); if (S.chip !== 'All') { S.chip = 'All'; renderChips(); loadHome(); } window.scrollTo({ top: 0, behavior: 'smooth' }); },
+      'tab-home'() { closeSheet(); closeSub(); if (S.tab === 'home') { window.scrollTo({ top: 0, behavior: 'smooth' }); return; } setTab('home'); },
+      'tab-subs'() { closeSheet(); closeSub(); setTab('subs'); },
+      'tab-library'() { closeSheet(); closeSub(); setTab('library'); },
       search() { openSearch(); },
-      add() { openAdd(); },
+      add() { if (sheetOpen && !$('add-body')) closeSheet(); openAdd(); },
       settings() { openSettings(); },
       'open-analytics'() { if (sheetOpen) closeSheet(); openAnalytics(); },
       'an-range'(el) { S.anRange = el.dataset.v; renderAnalytics(); },
+      'an-bar'(el) {
+        document.querySelectorAll('.an-chart .bc').forEach(b => b.classList.toggle('sel', b === el));
+        const t = $('an-tip'); if (t) t.textContent = el.dataset.tip;
+      },
       import() { openAdd(null, 'playlist'); },
       'open-import'() { openAdd(null, 'playlist'); },
       'open-import-link'() { openImport($('add-url').value); },
@@ -2667,6 +2914,7 @@
 
       'st-toggle'() {
         ST.running = !ST.running;
+        if (ST.running && !stInterval) startStudyTimer(ST.videoId || S.cur);
         if (!ST.running) persistStudyStats();
         updateStudyBarUI();
       },
@@ -2676,12 +2924,6 @@
         persistStudyStats();
         updateStudyBarUI();
         toast(ST.mode === 'break' ? 'Break timer started' : 'Resumed lecture timer');
-      },
-
-      'toggle-desc'() {
-        const box = $('wp-desc-box');
-        const open = box.classList.toggle('open');
-        $('wp-desc-more').textContent = open ? 'Show less' : '...more';
       },
 
       'hist-menu'() { openSheet(`<button class="mi" data-act="hist-clear">${ic('trash')}<span>Clear all watch history</span></button>`); },
@@ -2741,13 +2983,24 @@
       'goto-goal'() { openSettings('goal'); },
       'ui-auto'() { S.set.ui = 'auto'; sv(K.set, S.set); window.TV_UI(); renderSettings(); },
       'topic-del'(el) { S.set.topics = S.set.topics.filter(t => t !== el.dataset.v); if (!S.set.topics.length) S.set.topics = DEF_TOPICS.slice(); if (S.chip === el.dataset.v) { S.chip = 'All'; loadHome(); } sv(K.set, S.set); renderChips(); renderSettings(); },
+      'forget-all'() {
+        confirmSheet('Delete everything about you?', 'This erases watch history, study sessions, analytics, topic taps, search history and cached feeds on this device. Playlists, notes, subscriptions and settings stay.', 'Delete', () => {
+          S.hist = []; S.sessions = []; S.usage = {}; S.set.hits = {};
+          sv(K.hist, S.hist); sv(K.sess, S.sessions); sv(K.usage, S.usage); sv(K.set, S.set);
+          ['tv3_q', K.cache, K.subfeed].forEach(k => localStorage.removeItem(k));
+          Object.keys(PC).forEach(k => delete PC[k]); scache.clear();
+          renderVisible(); if (subOpen && S.sub && S.sub.kind === 'settings') renderSettings();
+          if (S.tab === 'home') loadHome();
+          toast('Everything about you was deleted');
+        });
+      },
       'reset-interests'() { confirmSheet('Reset recommendations', 'Forget which topics you tapped? Your history and notes are not touched.', 'Reset', () => { S.set.hits = {}; sv(K.set, S.set); toast('Interests reset'); }); },
       'api-test'() {
         S.set.apiKey = ($('api-in').value || '').trim(); sv(K.set, S.set); apiDead = 0;
         const st = $('api-status');
         if (!hasKey()) { st.textContent = 'That does not look like an API key.'; return; }
         st.textContent = 'Testing…';
-        apiGet('videos', { part: 'id', id: 'dQw4w9WgXcQ' }).then(() => { st.textContent = '✓ Key works. Search, channels and subscriptions will use it.'; S.chip === 'All' && loadHome(); }, e => { st.textContent = '✗ ' + (e.message || 'Key rejected') + (e.reason === 'API_KEY_HTTP_REFERRER_BLOCKED' ? ' (remove the website restriction or add this site)' : ''); });
+        apiGet('videos', { part: 'id', id: 'dQw4w9WgXcQ' }).then(() => { st.textContent = 'Key works. Search, channels and subscriptions will use it.'; S.chip === 'All' && loadHome(); }, e => { st.textContent = 'Key problem: ' + (e.message || 'Key rejected') + (e.reason === 'API_KEY_HTTP_REFERRER_BLOCKED' ? ' (remove the website restriction or add this site)' : ''); });
       },
       backup() {
         const data = {};
@@ -2762,10 +3015,12 @@
       'rm-photo'() { delete S.set.photo; sv(K.set, S.set); renderSettings(); if (S.tab === 'library') renderLibrary(); },
       'install-pwa'() {
         if (deferredInstallPrompt) { deferredInstallPrompt.prompt(); deferredInstallPrompt = null; }
-        else toast('In Chrome tap ⋮ → Install app (needs the https link)');
+        else toast('In Chrome open the menu, then Install app (needs the https link)');
       },
 
       'c-theater'() { toggleTheaterLayout(); },
+      'ad-manual'() { S.adManual = Date.now() + 45000; adMoving = 0; setAd(true); toast('Ad mode: tap YouTube\u2019s Skip button'); },
+      'wp-more'() { if (!S.cur) return; const m = M(S.cur); openSheet(`<div class="shead">${esc(m.title)}</div><p class="hint" style="margin:0 0 .6rem">${esc([m.channel, m.views, m.pub].filter(Boolean).join(' \u2022 '))}</p><div class="desc-sheet">${esc(m.desc || 'No description available yet.')}</div>`); },
       'th-more-menu'() { if (S.cur) openMenu(S.cur, 'x'); },
       'open-notes-sheet'() { if (!S.cur) return; openSheet('<div class="shead">Notes</div><div class="notes-host"></div>'); renderNotes(); },
       'open-queue-sheet'() {
@@ -2799,8 +3054,10 @@
       'b-save'() { if (S.cur) { menuCtx = { id: S.cur }; saveSheet(S.cur); } },
       'b-share'() { if (S.cur) shareVideo(S.cur); },
       'b-more'() { if (S.cur) openMenu(S.cur, 'x'); },
-      'b-notes'() { const b = $('notes-box'); b.hidden = !b.hidden; if (!b.hidden) renderNotes(); },
+      'b-notes'() { const b = $('notes-box'); b.hidden = !b.hidden; if (!b.hidden) renderNotes(); syncNotesCard(); },
       'note-new'() { openNoteEditor(S.cur); },
+      'np-view'(el) { S.npView = el.dataset.v; renderNotesPage(); },
+      'ng-toggle'(el) { const g = el.closest('.ng'); if (!g) return; const c = g.classList.toggle('col'); S.npCol[el.dataset.id] = c; },
       'note-filter'(el) { S.nfilter = el.dataset.v; renderNotes(); renderNotesPage(); },
       'note-star'(el) { const n = (S.notes[el.dataset.id] || []).find(x => x.id === el.dataset.nid); if (n) { n.star = !n.star; sv(K.notes, S.notes); renderNotes(); renderNotesPage(); } },
       'note-menu'(el) {
@@ -3031,6 +3288,20 @@
     });
     window.addEventListener('pagehide', () => { saveProg(); flushStudySession(); saveUsage(); });
 
+    function syncExternal() {
+      try {
+        const pl = ld(K.pl, null), mt2 = ld(K.meta, null);
+        if (Array.isArray(pl)) {
+          const a = JSON.stringify(S.playlists), b = JSON.stringify(pl);
+          if (a !== b) { S.playlists = pl; ['wl', 'liked'].forEach(id => { if (!S.playlists.some(p => p.id === id)) S.playlists.unshift({ id, name: id === 'wl' ? 'Watch later' : 'Liked videos', sys: true, items: [] }); }); }
+        }
+        if (mt2 && typeof mt2 === 'object') Object.keys(mt2).forEach(id => { if (!S.meta[id] || (!S.meta[id].title && mt2[id].title)) S.meta[id] = Object.assign({}, S.meta[id] || {}, mt2[id]); });
+        if (!(S.cur && S.playing)) renderVisible();
+      } catch (e) {}
+    }
+    window.addEventListener('storage', e => { if (e.key === K.pl || e.key === K.meta) syncExternal(); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) syncExternal(); });
+
     function init() {
       load();
       $('subs-top-btn').innerHTML = ic('subs');
@@ -3041,6 +3312,8 @@
       $('nav-subs').innerHTML = ic('subs') + '<span>Subscriptions</span>';
       $('nav-library').innerHTML = ic('library') + '<span>You</span>';
 
+      updateStudyBarUI();
+      $('ad-min').innerHTML = ic('chev', 24);
       $('c-prev').innerHTML = ic('prev', 24);
       $('c-rew').innerHTML = ic('rew', 28);
       $('c-fwd').innerHTML = ic('fwd', 28);
@@ -3055,7 +3328,10 @@
       setTab('home', true);
       loadHome();
 
-      if (!handleShare()) setTimeout(checkClip, 500);
+      const sp = $('splash');
+      if (sp) { setTimeout(() => { sp.classList.add('out'); setTimeout(() => sp.remove(), 450); }, 650); }
+      if (new URLSearchParams(location.search).get('add')) { try { history.replaceState({}, '', location.pathname); } catch (e) {} setTimeout(() => openAdd(), 700); }
+      else if (!handleShare()) setTimeout(checkClip, 500);
       if ('IntersectionObserver' in window) {
         new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) loadMore(); }, { rootMargin: '600px' }).observe($('feed-end'));
       }

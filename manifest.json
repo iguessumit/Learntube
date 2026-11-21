@@ -7,7 +7,7 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#0d0d0f",
+  "background_color": "#130c24",
   "theme_color": "#0d0d0f",
   "categories": [
     "education",
@@ -40,12 +40,25 @@
     }
   ],
   "share_target": {
-    "action": "./index.html",
+    "action": "./share.html",
     "method": "GET",
     "params": {
       "title": "title",
       "text": "text",
       "url": "url"
     }
-  }
+  },
+  "shortcuts": [
+    {
+      "name": "Add video",
+      "short_name": "Add",
+      "url": "./index.html?add=1",
+      "icons": [
+        {
+          "src": "./icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
 }
