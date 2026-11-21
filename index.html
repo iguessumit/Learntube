@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f0f0f" id="tc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TubeVault">
+  <title>TubeVault</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Sora:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="./icon.svg">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <link rel="manifest" href="./manifest.json" id="mf">
+  <script>
+    (function () {
+      // 1. Apply saved theme immediately to avoid flash
+      try {
+        var s = JSON.parse(localStorage.getItem('tv3_settings') || 'null');
+        var t = s && s.theme;
+        if (!t) t = (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+        document.documentElement.classList.toggle('dark', t === 'dark' || t === 'amoled');
+        document.documentElement.classList.toggle('amoled', t === 'amoled');
+      } catch (e) {}
+
+      // 2. Enforce native 1:1 mobile viewport scale on Chrome / Android PWA
+      try {
+        var vp = document.querySelector('meta[name="viewport"]');
+        if (vp && screen && screen.width && screen.width < 600 && window.innerWidth > screen.width * 1.35) {
+          vp.setAttribute('content', 'width=' + screen.width + ', initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover');
+        }
+      } catch (e) {}
+
+      // 2b. Display scale (--ui): 'auto' fits the phone width, or a fixed value from Settings
+      window.TV_UI = function () {
+        try {
+          var st = JSON.parse(localStorage.getItem('tv3_settings') || 'null') || {};
+          var v;
+          if (typeof st.ui === 'number' && st.ui >= 0.8 && st.ui <= 1.7) v = st.ui;
+          else {
+            var m = Math.min(screen.width || innerWidth, screen.height || innerHeight) || 360;
+            v = Math.min(1.3, Math.max(1, m / 360));
+          }
+          document.documentElement.style.setProperty('--ui', v.toFixed(3));
+        } catch (e) {}
+      };
+      window.TV_UI();
+      window.addEventListener('orientationchange', function () { setTimeout(window.TV_UI, 250); });
+
+      // 4. Register Service Worker on HTTPS for Android WebAPK & Share Target
+      if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('./sw.js').catch(function () {});
+        });
+      }
+    })();
+  </script>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+  <!-- ==================== STICKY HEADER & TOPIC CHIPS ==================== -->
+  <div id="hdr">
+    <header id="topbar">
+      <div class="logo" data-act="home-top" aria-label="TubeVault">
+        <span class="mk"><svg style="width:0.875rem;height:0.875rem" viewBox="0 0 24 24"><path d="M7 4v16l13-8z" fill="currentColor"/></svg></span>
+        <span class="wm"><b>Tube</b><i>Vault</i></span>
+      </div>
+      <div class="sp"></div>
+      <button class="ib" data-act="tab-subs" aria-label="Subscriptions" id="subs-top-btn" title="Subscriptions"></button>
+      <button class="ib" data-act="add" aria-label="Add video or playlist" id="add-btn" title="Add video"></button>
+      <button class="ib" data-act="search" aria-label="Search" id="search-btn" title="Search"></button>
+    </header>
+    <div id="chips" class="chips"></div>
+  </div>
+
+  <!-- ==================== MAIN VIEWS ==================== -->
+  <main>
+    <section id="view-home">
+      <div id="feed" class="feed"></div>
+      <div id="feed-extra"></div>
+      <div id="feed-more" class="feed"></div>
+      <div id="feed-end" style="height:0.125rem"></div>
+    </section>
+    <section id="view-subs" hidden></section>
+    <section id="view-library" hidden></section>
+  </main>
+
+  <!-- ==================== BOTTOM NAVIGATION ==================== -->
+  <nav id="nav">
+    <button data-act="tab-home" id="nav-home" class="on"></button>
+    <button data-act="tab-subs" id="nav-subs"></button>
+    <button data-act="tab-library" id="nav-library"></button>
+  </nav>
+
+  <!-- ==================== SUB-PAGES (HISTORY, PLAYLIST, CHANNEL, ANALYTICS, SEARCH) ==================== -->
+  <div id="sub"></div>
+
+  <!-- ==================== IN-APP YOUTUBE PLAYER LAYER ==================== -->
+  <div id="player-layer">
+    <!-- Top Lecture Stopwatch & Break Tracker -->
+    <div id="study-bar">
+      <span id="st-mode-pill" class="st-mode">LECTURE</span>
+      <span id="st-main-time" class="st-time tnum">00:00</span>
+      <span id="st-break-time" class="st-sub tnum">Break 00:00</span>
+      <div class="sp"></div>
+      <button id="st-toggle-btn" class="st-btn act" data-act="st-toggle">Pause</button>
+      <button id="st-break-btn" class="st-btn" data-act="st-break">Take Break</button>
+    </div>
+
+    <!-- Portrait Cinema Top HUD (Centered Mode) -->
+    <div id="th-top">
+      <div class="th-bar">
+        <button class="ib" data-act="c-min" id="th-min" aria-label="Minimise"></button>
+        <div class="sp"></div>
+        <button class="ib" data-act="c-theater" id="th-layout" title="Switch to Half-Screen Watch Page"></button>
+        <button class="ib" data-act="c-speed" id="th-speed" aria-label="Playback speed"></button>
+        <button class="ib" data-act="mini-close" id="th-close" aria-label="Close player"></button>
+      </div>
+      <div class="th-meta">
+        <h2 id="th-title"></h2>
+        <p id="th-handle"></p>
+      </div>
+    </div>
+
+    <!-- Video Stage -->
+    <div id="pv">
+      <div id="yt-host"></div>
+      <div id="shield"></div>
+      <div id="ad-chip"><b>Ad</b><span id="ad-txt">Tap “Skip” on the video when it appears</span></div>
+
+      <button class="ib" id="nbtn" data-act="c-min" aria-label="Minimise"></button>
+      <button class="ib" id="nsw" data-act="fb-next">Switch server</button>
+
+      <div id="bl" class="badge">« 10s</div>
+      <div id="br" class="badge">10s »</div>
+
+      <div id="ctrl">
+        <div class="ctop">
+          <button class="ib" data-act="c-min" id="c-min"></button>
+          <div class="sp"></div>
+          <button class="ib" data-act="c-theater" id="c-theater" title="Portrait Cinema (Centered Middle Screen)"></button>
+          <button class="ib" data-act="c-auto" id="c-auto" aria-label="Autoplay"></button>
+          <button class="ib" data-act="c-speed" id="c-speed" aria-label="Playback speed"></button>
+        </div>
+        <div class="cmid">
+          <button class="sm" data-act="c-prev" id="c-prev"></button>
+          <button class="sm" data-act="c-rew" id="c-rew"></button>
+          <button class="big" data-act="c-play" id="c-play"></button>
+          <button class="sm" data-act="c-fwd" id="c-fwd"></button>
+          <button class="sm" data-act="c-next" id="c-next"></button>
+        </div>
+        <div class="cbot">
+          <span id="c-time" class="tnum">0:00 / --:--</span>
+          <div class="sp"></div>
+          <button class="ib" style="width:2.25rem;height:2.25rem" data-act="c-fs" id="c-fs"></button>
+        </div>
+        <div id="scrub">
+          <div class="tr"></div>
+          <div id="sc-fill"></div>
+          <div id="sc-knob"></div>
+          <div id="sc-tip" class="tip tnum"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Portrait Cinema Bottom HUD (Centered Mode) -->
+    <div id="th-bot">
+      <div class="th-time-row">
+        <span id="th-time" class="tnum">0:00 / --:--</span>
+        <button class="ib" style="width:2.25rem;height:2.25rem" data-act="c-fs" id="th-fs" aria-label="Landscape Fullscreen"></button>
+      </div>
+      <div id="th-scrub">
+        <div class="tr"></div>
+        <div id="th-fill"></div>
+        <div id="th-knob"></div>
+      </div>
+      <div class="th-actions">
+        <button class="ib" id="th-like" data-act="b-like" aria-label="Like"></button>
+        <button class="th-study-chip tnum" id="th-study-btn" data-act="st-break">00:00</button>
+        <button class="ib" id="th-note" data-act="open-notes-sheet" aria-label="Notes"></button>
+        <button class="ib" id="th-more" data-act="th-more-menu" aria-label="More"></button>
+        <div class="sp"></div>
+        <button class="th-next-pill" id="th-next-pill" data-act="c-next" title="Play next video" hidden><img id="th-next-img" alt=""></button>
+        <button class="ib" id="th-queue" data-act="open-queue-sheet" aria-label="Up Next Queue"></button>
+      </div>
+    </div>
+
+    <div id="mini-prog"></div>
+    <div id="mini-ctrl">
+      <div class="mt" data-act="expand"><h4 id="mini-title"></h4><p id="mini-chan"></p></div>
+      <button class="ib" data-act="mini-play" id="mini-play"></button>
+      <button class="ib" data-act="mini-close" id="mini-close"></button>
+    </div>
+
+    <!-- Watch Page Body -->
+    <div id="pbody">
+      <div class="wp">
+        <h1 id="wp-title" data-act="wp-more"></h1>
+        <div id="wp-stats"><span id="wp-meta"></span></div>
+
+        <div class="desc-box" id="wp-desc-box" data-act="toggle-desc">
+          <div class="desc-text" id="wp-desc">Loading video description...</div>
+          <span class="desc-more" id="wp-desc-more">...more</span>
+        </div>
+
+        <div class="wp-chan">
+          <span id="wp-av" data-act="open-cur-channel" style="cursor:pointer"></span>
+          <b id="wp-chan" class="wch" data-act="open-cur-channel"></b>
+          <button class="sub-btn" id="wp-sub-btn" data-act="toggle-cur-sub">Subscribe</button>
+        </div>
+
+        <div class="wp-acts">
+          <button class="pill" id="b-like" data-act="b-like"></button>
+          <button class="pill" id="b-save" data-act="b-save"></button>
+          <button class="pill" id="b-share" data-act="b-share"></button>
+          <button class="pill" id="b-more" data-act="b-more"></button>
+        </div>
+
+        <div class="ncard" data-act="b-notes">
+          <div class="nh"><b>Notes</b><span id="notes-n">0</span></div>
+          <p id="notes-prev"></p>
+        </div>
+        <div id="notes-box" class="notes-host" hidden></div>
+
+        <div class="sechead" style="padding:0.5rem 0 0.25rem">Up Next</div>
+        <div id="upnext"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODALS, CLIPBOARD BANNER & TOASTS ==================== -->
+  <div id="sheet-root"></div>
+  <div id="clip"></div>
+  <div id="toast"></div>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>
