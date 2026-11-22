@@ -15,7 +15,9 @@
       cid: 'tv3_cid',
       cache: 'tv3_cache',
       nsum: 'tv3_nsum',
-      subfeed: 'tv3_subfeed'
+      subfeed: 'tv3_subfeed',
+      sched: 'tv3_sched',
+      q: 'tv3_q'
     };
     const DEF_TOPICS = ['JEE', 'Physics', 'Maths', 'Chemistry', 'Coding', 'AI', 'Finance', 'Cybersecurity', 'Biology', 'Economics'];
     /* Learning-only guard rails: anything matching BAD (and not clearly a lecture) is never recommended. */
@@ -64,7 +66,7 @@
     const H = { ids: [], recs: [], loading: false, err: false };
     const ctxLists = {};
     const ld = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
-    const sv = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+    const sv = (k, v) => { if (window.__wiped) return; try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
     const _ta = document.createElement('textarea');
@@ -310,8 +312,33 @@
     const histMap = () => { const m = {}; S.hist.forEach(h => { m[h.v] = h; }); return m; };
     const pctOf = h => (h && h.t > 0 ? Math.min(100, Math.round((h.w / h.t) * 100)) : 0);
 
+    const SUBJ = {
+      Physics: /\b(physics|mechanics|electrostatics|optics|thermodynamics|quantum|kinematics|magnetism|electromagnetic|newton|laws of motion|rotational|gravitation|current electricity|semiconductor|wave motion|oscillations|ray optics|work energy)\b/gi,
+      Chemistry: /\b(chemistry|organic|inorganic|mole concept|reaction|reactions|periodic table|chemical|equilibrium|electrochemistry|stoichiometry|hydrocarbons?|alkanes?|alkenes?|coordination|thermochemistry|atomic structure|chemical bonding|salt analysis|p block|d block|isomerism)\b/gi,
+      Maths: /\b(maths?|mathematics|calculus|algebra|trigonometry|integration|differentiation|geometry|matrices|determinants?|probability|vectors?|limits|permutations?|combinations?|combinatorics|conic sections?|quadratic|complex numbers|statistics|sequence and series|binomial)\b/gi,
+      Biology: /\b(biology|botany|zoology|genetics|anatomy|cell|cells|physiology|ecology|evolution|photosynthesis|dna|rna|plant kingdom|biomolecules|reproduction|cytology|neet biology|human physiology|morphology)\b/gi
+    };
+    function subjOf(text) {
+      const t = String(text || '').toLowerCase();
+      let best = null, bn = 0;
+      Object.keys(SUBJ).forEach(k => { const n = (t.match(SUBJ[k]) || []).length; if (n > bn) { bn = n; best = k; } });
+      return best;
+    }
+    /* Study-only filter: entertainment / low-value videos never get in. */
+    const STRONG_BAD = /\b(lofi|lo-fi|music|songs?|remix|lyrics|official video|trailer|movies?|film|web series|gaming|gameplay|walkthrough|minecraft|gta|comedy|funny|prank|memes?|vlogs?|reaction|asmr|celebrity|bollywood|cricket|ipl|football|roast|tiktok|reels?|shorts?|dance|whatsapp status|bgmi|pubg|free fire|netflix|anime|cartoon|serial|bigg boss|gossip|highlights|unboxing|challenge)\b/i;
+    const WEAK_BAD = /\b(news|breaking|live stream|podcast|motivation|motivational|episode|stories|story|interview|influencer)\b/i;
+    const LECT_RX = /\b(lecture|tutorial|course|class|chapter|lesson|revision|explained|crash course|full course|masterclass|jee|neet|dpp|pyq|ncert)\b/i;
+    function eduOK(title, channel, desc) {
+      if (!title) return true;
+      const t = title + ' ' + (channel || ''), sub = subjOf(t), lect = LECT_RX.test(t);
+      if (STRONG_BAD.test(t) && !(lect && sub)) return false;
+      if (WEAK_BAD.test(t) && !(sub || lect)) return false;
+      return !!(sub || lect || GOOD_RX.test(t + ' ' + String(desc || '').slice(0, 300)));
+    }
+    const NOT_ALLOWED_MSG = `<div class="empty"><b>Not available here.</b><br><br>Entertainment and time-pass videos are blocked in Vaultube. This space is for studying \u2014 pick a topic, learn it, and get back to your goals.</div>`;
     function detectCategory(text) {
       const t = (text || '').toLowerCase();
+      { const sb = subjOf(t); if (sb) return sb; }
       if (/\b(jee|iit|neet|mains|advanced)\b/.test(t)) return 'JEE';
       if (/\b(physics|mechanics|electrostatics|optics|thermodynamics|quantum)\b/.test(t)) return 'Physics';
       if (/\b(math|calculus|algebra|trigonometry|integration|geometry)\b/.test(t)) return 'Maths';
@@ -457,11 +484,11 @@
     }
 
     /* ---- Shorts never exist here ---- */
-    const isShortItem = x => !!x && ((x.dur > 0 && x.dur <= 75) || (x.lengthSeconds > 0 && x.lengthSeconds <= 75) || /#shorts?\b|\bshorts?\b/i.test(x.title || '') || x.short === true);
-    const isShort = id => { const m = S.meta[id]; return !!m && ((m.dur > 0 && m.dur <= 75) || /#shorts?\b|\byoutube shorts?\b/i.test(m.title || '')); };
+    const isShortItem = x => !!x && ((x.dur > 0 && x.dur < 120) || (x.lengthSeconds > 0 && x.lengthSeconds < 120) || /#shorts?\b|\bshorts?\b/i.test(x.title || '') || x.short === true);
+    const isShort = id => { const m = S.meta[id]; return !!m && ((m.dur > 0 && m.dur < 120) || /#shorts?\b|\byoutube shorts?\b/i.test(m.title || '')); };
     const isLearning = id => {
-      const m = M(id), t = m.title + ' ' + m.channel;
-      if (BAD_RX.test(t) && !/\b(lecture|tutorial|course|class|chapter|lesson|jee|neet)\b/i.test(t)) return false;
+      const m = M(id);
+      if (!eduOK(m.title, m.channel, m.desc)) return false;
       return !/^(lofi|gaming|podcasts|music|motivation|entertainment|vlog|comedy)$/i.test(m.cat);
     };
     const isBlocked = id => {
@@ -475,7 +502,7 @@
 
     function ingest(list, catHint) {
       return list
-        .filter(x => /^[\w-]{11}$/.test(x.id) && !isShortItem(x))
+        .filter(x => /^[\w-]{11}$/.test(x.id) && !isShortItem(x) && eduOK(x.title, x.channel, x.desc))
         .map(x => {
           const o = { cat: catHint || undefined };
           ['title', 'channel', 'cid', 'dur', 'views', 'pub', 'ts', 'desc'].forEach(k => { if (x[k]) o[k] = x[k]; });
@@ -934,6 +961,44 @@
       clearTimeout(toastT);
       toastT = setTimeout(() => { t.innerHTML = ''; }, actionLabel ? 4200 : 2500);
     }
+    let wipeI = 0;
+    const WIPE = [
+      { t: 'Do you really want to delete everything?', m: 'This permanently erases ALL Vaultube data on this device: playlists, notes, history, study sessions, analytics, subscriptions, settings and caches. You will be asked to confirm 4 times.', w: '', b: 'Continue' },
+      { t: 'Confirm (1 of 2)', m: 'Type CONFIRM to continue.', w: 'CONFIRM', b: 'Next' },
+      { t: 'Confirm (2 of 2)', m: 'Type CONFIRM once more.', w: 'CONFIRM', b: 'Next' },
+      { t: 'Verify (1 of 2)', m: 'Type VERIFY to continue.', w: 'VERIFY', b: 'Next' },
+      { t: 'Verify (2 of 2)', m: 'Last step. Type VERIFY to delete everything permanently. You will get 10 seconds to undo.', w: 'VERIFY', b: 'Delete everything' }
+    ];
+    function wipeStep(i) {
+      wipeI = i;
+      if (i >= WIPE.length) { closeSheet(); wipeAll(); return; }
+      const s = WIPE[i];
+      openSheet(`<div class="shead">${esc(s.t)}</div><p class="hint" style="font-size:0.875rem">${esc(s.m)}</p>${s.w ? `<input id="wz-in" class="wz-in" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="${s.w}" oninput="document.getElementById('wz-ok').disabled = this.value.trim() !== '${s.w}'">` : ''}<div class="srow"><button class="btn grow" data-act="sheet-close">Cancel</button><button id="wz-ok" class="btn red grow" data-act="wipe-next" ${s.w ? 'disabled' : ''}>${s.b}</button></div>`);
+    }
+    function wipeAll() {
+      const snap = [];
+      try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); snap.push([k, localStorage.getItem(k)]); } } catch (e) {}
+      window.__wiped = true;
+      try { localStorage.clear(); sessionStorage.clear(); } catch (e) {}
+      const ov = document.createElement('div');
+      ov.id = 'wipe-ov';
+      let left = 10;
+      const draw = () => { ov.innerHTML = `<div class="wo-card"><div class="wo-ic">${ic('trash', 28)}</div><h3>Everything was deleted</h3><p>All data is gone.</p><div class="wo-bar"><i style="animation-duration:10s"></i></div><button class="btn red" id="wo-undo">Undo (${left}s)</button></div>`; $('wo-undo').onclick = undo; };
+      const finish = () => {
+        clearInterval(tm);
+        try { localStorage.clear(); } catch (e) {}
+        const done = () => location.reload();
+        Promise.all([window.caches ? caches.keys().then(ks => Promise.all(ks.map(k => caches.delete(k)))) : 0, navigator.serviceWorker ? navigator.serviceWorker.getRegistrations().then(rs => Promise.all(rs.map(r => r.unregister()))) : 0]).then(done, done);
+      };
+      const undo = () => {
+        clearInterval(tm);
+        try { snap.forEach(([k, v]) => localStorage.setItem(k, v)); } catch (e) {}
+        window.__wiped = false;
+        location.reload();
+      };
+      document.body.appendChild(ov); draw();
+      const tm = setInterval(() => { left--; if (left <= 0) { finish(); return; } const b = $('wo-undo'); if (b) { b.textContent = `Undo (${left}s)`; ov.querySelector('b').textContent = left; } }, 1000);
+    }
     function confirmSheet(title, msg, ok, fn) {
       confirmFn = fn;
       openSheet(`<div class="shead">${esc(title)}</div><p class="hint" style="font-size:0.875rem">${esc(msg)}</p><div class="srow"><button class="btn grow" data-act="sheet-close">Cancel</button><button class="btn red grow" data-act="confirm-ok">${esc(ok)}</button></div>`);
@@ -1189,7 +1254,7 @@
           ${profAvatar(true)}
           <div class="sp" style="min-width:0">
             <h1>${esc(S.set.name || 'Student')}</h1>
-            <p>${esc(S.set.handle || '@tubevault')} \u2022 ${saved.size} saved${streakInfo().cur ? ` \u2022 <span class="streak-mini">${flameIc(14)} ${streakInfo().cur}</span>` : ''}</p>
+            <p>${esc(S.set.handle || '@tubevault')} \u2022 ${saved.size} saved</p>
           </div>
           <button class="ib" data-act="open-analytics" aria-label="Study insights" title="Insights">${ic('chart')}</button>
           <button class="ib" data-act="settings" aria-label="Settings" title="Settings">${ic('gear')}</button>
@@ -1231,9 +1296,10 @@
         r.app++;
         if (S.playing && S.cur && !S.ad) {
           r.watch++;
-          const c = M(S.cur).cat || 'General';
+          const cm = M(S.cur), c = subjOf((cm.title || '') + ' ' + (cm.channel || '') + ' ' + String(cm.desc || '').slice(0, 300)) || cm.cat || 'General';
           r.cats[c] = (r.cats[c] || 0) + 1;
           r.vids[S.cur] = (r.vids[S.cur] || 0) + 1;
+          if (learnCat(c)) { const hh = new Date().getHours(); r.hrs = r.hrs || {}; r.hrs[hh] = (r.hrs[hh] || 0) + 1; }
         }
         usageDirty = true;
         if (++usageN % 10 === 0) saveUsage();
@@ -1257,6 +1323,11 @@
       return { cur, best: Math.max(best, cur) };
     }
 
+    let tgDraft = { t: '', h: 10 };
+    function tgSheet() {
+      const cs = [...new Set(S.set.topics.concat(['Physics', 'Chemistry', 'Maths', 'Coding', 'AI', 'Finance']).filter(learnCat))].slice(0, 14);
+      openSheet(`<div class="shead">Monthly target</div><p class="hint" style="font-size:0.8125rem;margin:0 0 0.5rem">Pick a subject</p><div class="tg-chips">${cs.map(c => `<button class="${tgDraft.t === c ? 'on' : ''}" data-act="tg-pick" data-t="${esc(c)}">${esc(c)}</button>`).join('')}</div><p class="hint" style="font-size:0.8125rem;margin:0.75rem 0 0.5rem">Hours this month</p><div class="seg">${[5, 10, 20, 40, 60].map(v => `<button class="${tgDraft.h === v ? 'on' : ''}" data-act="tg-h" data-v="${v}">${v}h</button>`).join('')}</div><div class="srow"><button class="btn grow" data-act="sheet-close">Cancel</button><button class="btn red grow" data-act="tg-save">Save target</button></div>`);
+    }
     S.anRange = '7d';
     function openAnalytics() {
       openSub({ kind: 'analytics' }, '<div id="an-page" class="an"></div>');
@@ -1330,90 +1401,136 @@
       // donut
       const tot = cats.reduce((a, x) => a + x[1], 0);
       const topC = cats.slice(0, 5), restC = cats.slice(5).reduce((a, x) => a + x[1], 0);
-      const shades = ['#7c5cff', '#9a82ff', '#b5a3ff', '#cfc4ff', '#e4defe'];
+      const shades = ['#F4503A', '#FF8A78', '#C73A27', '#FFB4A8', '#FFD9D2'];
       const segs = topC.map(([c, v], i) => ({ c, v, col: shades[i] }));
-      if (restC) segs.push({ c: 'Other topics', v: restC, col: 'var(--bg3)' });
+      if (restC) segs.push({ c: 'Other topics', v: restC, col: '#D9DAE3' });
       let acc = 0;
       const grad = segs.map(x => { const a0 = acc; acc += (x.v / (tot || 1)) * 360; return `${x.col} ${a0.toFixed(1)}deg ${acc.toFixed(1)}deg`; }).join(',');
 
       const chips = [['1d', 'Today'], ['7d', '7 days'], ['30d', '30 days'], ['all', 'All time']].map(([v, l]) => `<button class="${range === v ? 'on' : ''}" data-act="an-range" data-v="${v}">${l}</button>`).join('');
-      const ins = (icon, col, k, v) => `<div class="an-i" style="--c:${col}"><span>${ic(icon, 16)}</span><div><small>${k}</small><b>${v}</b></div></div>`;
+      const tile = (i, v, l, dl, sub) => `<div class="ax-t t${i}"><b class="tnum">${v}</b><span>${l}</span><em>${sub}</em>${dl || ''}</div>`;
       const maxV = vids.length ? Math.max(1, ...vids.map(([, v]) => v.w + v.l)) : 1;
 
+      /* ---- best study time ---- */
+      const hrs = Array(24).fill(0);
+      keys.forEach(k => { const o = U(k).hrs || {}; Object.keys(o).forEach(x => { hrs[+x] += o[x]; }); });
+      if (!hrs.some(Boolean)) sess.forEach(x => { if (x.at) hrs[new Date(x.at).getHours()] += x.lectureSec || 0; });
+      const hrMax = Math.max(...hrs), peakH = hrMax ? hrs.indexOf(hrMax) : -1;
+      const fmtHr = h => (h % 12 === 0 ? 12 : h % 12) + (h < 12 ? ' AM' : ' PM');
+      const BLK = [['Morning', '5 AM – 12 PM', 5, 12], ['Afternoon', '12 – 5 PM', 12, 17], ['Evening', '5 – 9 PM', 17, 21], ['Night', '9 PM – 5 AM', 21, 29]];
+      const inBlk = (h, b) => (h >= b[2] && h < b[3]) || (b[3] > 24 && h + 24 < b[3] && h + 24 >= b[2]);
+      const blocks = BLK.map(b => {
+        const time = hrs.reduce((a, v, h) => a + (inBlk(h, b) ? v : 0), 0);
+        const ss = sess.filter(x => x.at && inBlk(new Date(x.at).getHours(), b));
+        const l = ss.reduce((a, x) => a + (x.lectureSec || 0), 0), br = ss.reduce((a, x) => a + (x.breakSec || 0), 0);
+        return { n: b[0], r: b[1], time, foc: l + br ? Math.round((l / (l + br)) * 100) : null, ns: ss.length };
+      });
+      const bestBlk = blocks.filter(b => b.foc !== null).sort((a, b) => b.foc - a.foc || b.time - a.time)[0] || blocks.slice().sort((a, b) => b.time - a.time)[0];
+      const goodS = sess.filter(x => (x.lectureSec || 0) >= 300 && x.lectureSec / ((x.lectureSec || 0) + (x.breakSec || 0)) >= 0.85);
+      const sweet = goodS.length ? Math.round(goodS.reduce((a, x) => a + x.lectureSec, 0) / goodS.length / 60) : 0;
+      /* ---- goals & targets ---- */
+      const dg = dayKeys(7).map(k => ({ k, l: learnOf(U(k)) }));
+      const hit7 = dg.filter(d => d.l >= goal).length;
+      const hit30 = dayKeys(30).filter(k => learnOf(U(k)) >= goal).length;
+      const wkTot = dg.reduce((a, d) => a + d.l, 0);
+      const mKey = todayKey().slice(0, 7), mCats = {};
+      Object.keys(S.usage).filter(k => k.startsWith(mKey)).forEach(k => Object.entries(S.usage[k].cats || {}).forEach(([c, v]) => { mCats[c.toLowerCase()] = (mCats[c.toLowerCase()] || 0) + v; }));
+      const dNow = new Date(), daysLeft = new Date(dNow.getFullYear(), dNow.getMonth() + 1, 0).getDate() - dNow.getDate();
+      const TGC = ['#F4503A', '#FFB020', '#1FA463', '#C73A27', '#8A8FA0'];
+
+      const gh = (icon, title, sub, right) => `<div class="gh"><span class="ixt">${ic(icon, 18)}</span><div class="gh-t"><b>${title}</b><small>${sub}</small></div>${right ? `<div class="gh-r">${right}</div>` : ''}</div>`;
+      const rowP = (dot, label, val, sub, pctv) => `<div class="pr"><div class="pr-h"><span><i style="background:${dot}"></i>${label}</span><b class="tnum">${val}</b></div><div class="pr-b"><u style="width:${Math.max(2, Math.min(100, pctv))}%;background:${dot}"></u></div><small>${sub}</small></div>`;
+      const gt = (cls, v, l, ico, dl) => `<div class="gt ${cls}"><span class="gt-ic">${ic(ico, 64)}</span><b class="tnum">${v}</b><span>${l}</span>${dl || ''}</div>`;
+      const topTotal = segs.reduce((a, x) => a + x.v, 0) || 1;
+      const lrnShare = tot ? Math.round((cats.filter(([c]) => learnCat(c)).reduce((a, x) => a + x[1], 0) / tot) * 100) : 0;
+      const SB = ['Physics', 'Chemistry', 'Maths', 'Biology'], sbSec = {}; SB.forEach(x => { sbSec[x] = 0; });
+      cats.forEach(([c, v]) => { const k = SB.find(x => x.toLowerCase() === String(c).toLowerCase()); if (k) sbSec[k] += v; });
+      const sbTot = SB.reduce((a, x) => a + sbSec[x], 0), sbCol = { Physics: '#F4503A', Chemistry: '#FFB020', Maths: '#1FA463', Biology: '#8A5CF6' };
+      const subjCard = `<section class="gc">${gh('book', 'Study time by subject', 'Detected from lecture title & description', `<span class="chip">Total ${fmtDurHuman(tot)}</span>`)}${SB.map(x => rowP(sbCol[x], x, fmtDurHuman(sbSec[x]), '', sbTot ? (sbSec[x] / sbTot) * 100 : 0)).join('')}</section>`;
+      const dRange = { '1d': 'Today', '7d': 'Last 7 days', '30d': 'Last 30 days', all: 'All time' }[range];
+
       el.innerHTML = `
-        ${subHeader('Insights')}
+        <div class="subhead"><button class="ib rnd" data-act="sub-back" aria-label="Back">${ic('back')}</button><h2>Analytics</h2><span class="rng">${ic('calendar', 15)}${dRange}</span></div>
         <div class="an-seg">${chips}</div>
 
-        <section class="an-hero">
-          <div class="hero-main">
-            <div class="hero-ring" style="--p:${gp}"><div><b class="tnum">${gp}%</b><small>of goal</small></div></div>
-            <div class="hero-txt">
-              <small>TODAY'S LEARNING</small>
-              <b class="tnum">${fmtDurHuman(tl)}</b>
-              <span>Goal ${fmtDurHuman(goal)} · <button class="link" data-act="goto-goal">Change</button></span>
-            </div>
-          </div>
-          <div class="hero-streak">
-            <div class="hs-flame">${flameIc(26)}</div>
-            <div><b class="tnum">${st.cur}</b><small>day streak</small></div>
-            <div class="hs-best"><b class="tnum">${st.best}</b><small>best</small></div>
-          </div>
-          <div class="hero-week">${wk}</div>
+        <section class="gc">
+          <div class="kick">WHERE YOU STAND</div>
+          <h3 class="gc-h">${tl ? fmtDurHuman(tl) + ' learned today' : 'Nothing learned yet today'}</h3>
+          <p class="gc-p">${gp}% of your ${fmtDurHuman(goal)} daily goal. <button class="link" data-act="goto-goal">Change goal</button></p>
+          <div class="pr-b big"><u style="width:${Math.max(2, gp)}%;background:linear-gradient(90deg,#FF8A78,#F4503A)"></u></div>
         </section>
 
-        <div class="an-kpis">
-          ${kpi('eye', 'var(--a1)', fmtDurHuman(cur.watch), 'Watch time', `~${fmtDurHuman(Math.round(cur.watch / Math.max(1, range === 'all' ? activeDays || 1 : n)))} / day`, delta(cur.watch, prev && prev.watch))}
-          ${kpi('brain', 'var(--a4)', fmtDurHuman(cur.learn), 'Learning', cur.watch ? `${Math.round((cur.learn / cur.watch) * 100)}% of watching` : 'Nothing yet', delta(cur.learn, prev && prev.learn))}
-          ${kpi('target', 'var(--a5)', focus + '%', 'Focus score', '')}
-          ${kpi('coffee', 'var(--a3)', fmtDurHuman(brk), 'Break time', `${lecture + brk ? 100 - focus : 0}% of study timer`)}
-          ${kpi('clock', 'var(--a2)', fmtDurHuman(cur.app), 'Time in app', `${fmtDurHuman(today.app || 0)} today`, delta(cur.app, prev && prev.app))}
-          ${kpi('layers', 'var(--a6)', String(Object.keys(vidMap).length), 'Videos', `${activeDays} active day${activeDays === 1 ? '' : 's'}`)}
+        <div class="gts">
+          ${gt('g1', fmtDurHuman(cur.watch), 'Watch time', 'eye', delta(cur.watch, prev && prev.watch))}
+          ${gt('g2', fmtDurHuman(cur.learn), 'Learning', 'brain', delta(cur.learn, prev && prev.learn))}
+          ${gt('g3', focus + '%', 'Focus', 'target')}
         </div>
 
-        <section class="an-card2">
-          <div class="c-h"><h3>Daily activity</h3><span class="c-s">${chartN} days</span></div>
+        ${subjCard}
+        <section class="gc">
+          ${gh('chart', 'Daily activity', `${dRange} · learning vs other`, `<span class="chip">avg ${fmtDurHuman(Math.round(avgLine))}</span>`)}
           <div class="an-tip" id="an-tip">${tipOf(lastD)}</div>
           <div class="an-chart${chartN > 7 ? ' dense' : ''}">
             <div class="grid">${[3, 2, 1].map(i => `<div style="bottom:${(i / 3) * 100}%"><span>${axisFmt(Math.round((top / 3) * i))}</span></div>`).join('')}<div class="avg" style="bottom:${Math.min(100, (avgLine / top) * 100)}%"><span>avg</span></div></div>
             <div class="bars">${cd.map((d, i) => `<button class="bc${d.k === todayKey() ? ' sel' : ''}" data-act="an-bar" data-tip="${esc(tipOf(d))}"><div class="bs" style="height:${Math.max(1.5, (d.t / top) * 100)}%"><i class="bo" style="flex:${d.o} 0 0"></i><i class="bl" style="flex:${d.l} 0 0"></i></div><small>${lbl(d.k, i)}</small></button>`).join('')}</div>
           </div>
-          <div class="an-leg"><span><i style="background:var(--a1)"></i>Learning</span><span><i style="background:var(--a2)"></i>Other</span><span><i class="ln"></i>Average</span></div>
+          <div class="an-leg"><span><i></i>Learning</span><span><i></i>Other</span><span><i class="ln"></i>Average</span></div>
           ${best.t ? `<p class="an-note">${ic('bolt', 14)} Best day: <b>${new Date(best.k + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' })}</b> with ${fmtDurHuman(best.t)} watched.</p>` : ''}
         </section>
 
-        <section class="an-card2">
-          <div class="c-h"><h3>Study vs break</h3><span class="c-s">timer sessions</span></div>
-          ${lecture + brk ? `<div class="split"><i style="flex:${lecture};background:var(--a1)"></i><i style="flex:${brk};background:var(--a3)"></i></div>
-          <div class="split-l"><div><span class="dot" style="background:var(--a1)"></span> Lecture <b class="tnum">${fmtDurHuman(lecture)}</b></div><div><span class="dot" style="background:var(--a3)"></span> Break <b class="tnum">${fmtDurHuman(brk)}</b></div></div>` : '<p class="hint">Start a video and use the study timer — your lecture and break split shows up here.</p>'}
-          <div class="an-ins">
-            ${ins('timer', 'var(--a1)', 'Longest lecture', fmtDurHuman(longest))}
-            ${ins('layers', 'var(--a5)', 'Sessions', String(sess.length))}
-            ${ins('flame', 'var(--a3)', 'Best streak', st.best + ' day' + (st.best === 1 ? '' : 's'))}
-            ${ins('calendar', 'var(--a4)', 'Avg session', sess.length ? fmtDurHuman(Math.round(lecture / sess.length)) : '0s')}
+        <section class="gc">
+          ${gh('timer', 'Study timer', `${sess.length} session${sess.length === 1 ? '' : 's'} in this period`, `<span class="big">${focus}%</span>`)}
+          ${lecture + brk ? `<div class="stack"><i style="flex:${lecture};background:#F4503A"></i><i style="flex:${brk};background:#FFB020"></i></div>
+          <div class="pr-list">
+            ${rowP('#F4503A', 'Lecture', fmtDurHuman(lecture), `Longest ${fmtDurHuman(longest)} · avg ${sess.length ? fmtDurHuman(Math.round(lecture / sess.length)) : '0s'} per session`, (lecture / (lecture + brk)) * 100)}
+            ${rowP('#FFB020', 'Break', fmtDurHuman(brk), `${100 - focus}% of study time`, (brk / (lecture + brk)) * 100)}
+          </div>` : '<p class="hint">Start a video and use the study timer. Your lecture and break split shows up here.</p>'}
+        </section>
+
+        <section class="gc">
+          ${gh('clock', 'Best time to study', hrMax ? `Your learning is strongest in the ${bestBlk.n.toLowerCase()}` : 'Needs a few study sessions', hrMax ? `<span class="big">${fmtHr(peakH)}<em>peak hour</em></span>` : '')}
+          ${hrMax ? `<div class="hrs">${hrs.map((v, h) => `<i class="${h === peakH ? 'pk' : ''}" style="height:${Math.max(4, Math.round((v / hrMax) * 100))}%" title="${fmtHr(h)}: ${fmtDurHuman(v)}"></i>`).join('')}</div>
+          <div class="hrs-ax"><span>12 AM</span><span>6 AM</span><span>12 PM</span><span>6 PM</span><span>11 PM</span></div>
+          <div class="pr-list">${blocks.map((b, i) => rowP(TGC[i % 4], b.n, b.foc !== null ? b.foc + '% focus' : (b.time ? fmtDurHuman(b.time) : '\u2014'), `${b.r} · ${fmtDurHuman(b.time)} learning${b.ns ? ` · ${b.ns} session${b.ns === 1 ? '' : 's'}` : ''}`, hrMax ? (b.time / Math.max(1, ...blocks.map(x => x.time))) * 100 : 0)).join('')}</div>
+          ${sweet ? `<p class="an-note">${ic('bolt', 14)} Sessions of about <b>${sweet} min</b> give you the highest focus. Plan your lectures around that.</p>` : ''}` : '<p class="hint">Watch a few learning videos and your best hours of the day show up here.</p>'}
+        </section>
+
+        <section class="gc">
+          ${gh('target', 'Goal progress', `Daily goal ${fmtDurHuman(goal)}`, `<span class="big">${hit7}/7<em>days hit</em></span>`)}
+          <div class="gbars">${dg.map(d => `<div><i style="height:${Math.max(4, Math.min(100, Math.round((d.l / goal) * 100)))}%" class="${d.l >= goal ? 'hit' : ''}"></i><small>${'SMTWTFS'[new Date(d.k + 'T12:00:00').getDay()]}</small></div>`).join('')}<u style="bottom:calc(1.25rem + (100% - 1.25rem) * 1)"></u></div>
+          <div class="pr-list">
+            ${rowP('#F4503A', 'This week', fmtDurHuman(wkTot), `of ${fmtDurHuman(goal * 7)} weekly goal`, (wkTot / (goal * 7)) * 100)}
+            ${rowP('#1FA463', 'Last 30 days', `${hit30}/30 days`, `${Math.round((hit30 / 30) * 100)}% goal hit rate`, (hit30 / 30) * 100)}
+            ${rowP('#FFB020', 'Learning vs other', `${lrnShare}%`, 'of your watch time is learning', lrnShare)}
           </div>
         </section>
 
-        <section class="an-card2">
-          <div class="c-h"><h3>Consistency</h3><span class="c-s">${hdays} learning day${hdays === 1 ? '' : 's'} in 12 weeks</span></div>
+        <section class="gc">
+          ${gh('book', 'Topic targets', 'Monthly study goals per subject', `<button class="chip btn" data-act="tg-add">+ Add</button>`)}
+          ${(S.set.targets || []).length ? `<div class="pr-list" style="margin-top:0">${S.set.targets.map((t, i) => { const done = mCats[t.t.toLowerCase()] || 0, need = t.h * 3600; return `<div data-act="tg-del" data-t="${esc(t.t)}" style="cursor:pointer">${rowP(TGC[i % 5], esc(t.t), `${(done / 3600).toFixed(1)} / ${t.h}h`, done >= need ? 'Target reached ✓' : `${((need - done) / 3600).toFixed(1)}h to go · ${daysLeft} day${daysLeft === 1 ? '' : 's'} left this month · tap to remove`, (done / need) * 100)}</div>`; }).join('')}</div>` : '<p class="hint" style="margin-top:0">Set a monthly target, for example "Physics 20h", and track how much of it you have finished.</p>'}
+        </section>
+
+        <section class="gc">
+          ${gh('calendar', 'Study days', `${hdays} learning day${hdays === 1 ? '' : 's'} in the last 12 weeks`, `<span class="big">${hdays}<em>days</em></span>`)}
           <div class="heat"><div class="hdow"><span>M</span><span></span><span>W</span><span></span><span>F</span><span></span><span>S</span></div><div class="hgrid">${heat}</div></div>
           <div class="heat-leg">Less <i class="hc l0"></i><i class="hc l1"></i><i class="hc l2"></i><i class="hc l3"></i><i class="hc l4"></i> More</div>
         </section>
 
-        <section class="an-card2">
-          <div class="c-h"><h3>Where your time goes</h3><span class="c-s">by topic</span></div>
-          ${segs.length ? `<div class="donut-row"><div class="donut" style="background:conic-gradient(${grad})"><div><b class="tnum">${fmtDurHuman(tot)}</b><small>total</small></div></div>
-          <div class="d-leg">${segs.map(x => `<div><i style="background:${x.col}"></i><span class="clamp1">${esc(x.c)}</span><b class="tnum">${Math.round((x.v / tot) * 100)}%</b></div>`).join('')}</div></div>
-          <div class="cat-list">${cats.slice(0, 8).map(([c, sec]) => `<div class="cat-row"><div class="cat-top"><span>${esc(c)} <em class="tag ${learnCat(c) ? 'l' : 'o'}">${learnCat(c) ? 'Learning' : 'Other'}</em></span><span class="tnum">${fmtDurHuman(sec)}</span></div><div class="cat-track"><div class="cat-fill" style="width:${Math.round((sec / (cats[0][1] || 1)) * 100)}%;background:var(--a1)"></div></div></div>`).join('')}</div>` : '<p class="hint">Watch a video to see where your time goes.</p>'}
+        <section class="gc">
+          ${gh('layers', 'Where your time goes', tot ? `${fmtDurHuman(tot)} across ${cats.length} topic${cats.length === 1 ? '' : 's'}` : 'By topic', tot ? `<span class="big">${lrnShare}%<em>learning</em></span>` : '')}
+          ${segs.length ? `<div class="stack">${segs.map(x => `<i style="flex:${x.v};background:${x.col}"></i>`).join('')}</div>
+          <div class="kvl">${segs.map(x => `<div><span class="clamp1"><i style="background:${x.col}"></i>${esc(x.c)}</span><b class="tnum">${fmtDurHuman(x.v)}</b><em>${Math.round((x.v / topTotal) * 100)}%</em></div>`).join('')}</div>` : '<p class="hint">Watch a video to see where your time goes.</p>'}
         </section>
 
-        <section class="an-card2">
-          <div class="c-h"><h3>Most-watched videos</h3><span class="c-s">top ${vids.length || 0}</span></div>
+        <section class="gc">
+          ${gh('play', 'Most-watched videos', vids.length ? `Top ${vids.length} in this period` : 'Nothing tracked yet')}
           ${vids.length ? vids.map(([id, v], i) => {
             const m = M(id);
-            return `<div class="an-vid2" data-act="play" data-id="${id}" data-ctx="x"><span class="rk">${i + 1}</span><div class="vt"><img src="${thumb(id)}" loading="lazy" alt=""></div><div class="ct"><h4 class="clamp2">${esc(m.title)}</h4><div class="vbar"><i style="width:${Math.max(4, Math.round(((v.w + v.l) / maxV) * 100))}%"></i></div><p>Watched <b>${fmtDurHuman(v.w)}</b>${v.s ? ` · Lecture ${fmtDurHuman(v.l)} · Break ${fmtDurHuman(v.b)}` : ''}</p></div></div>`;
+            return `<div class="rr" data-act="play" data-id="${id}" data-ctx="x"><span class="bdg b${Math.min(i, 3)}">${i + 1}</span><div class="rr-t"><b class="clamp2">${esc(m.title)}</b><small>${esc(m.channel || '')}${v.s ? ` · Lecture ${fmtDurHuman(v.l)}` : ''}</small></div><b class="rr-v tnum">${fmtDurHuman(v.w + v.l)}</b></div>`;
           }).join('') : '<p class="hint">No videos tracked in this period.</p>'}
         </section>
-        <p class="hint" style="padding:0 1rem 1.5rem;text-align:center">Tracked on this device only. Time pauses during ads and when the app is in the background.</p>
+
+        <div class="gnote">Tracked on this device only. Time pauses during ads and when the app is in the background.</div>
       `;
     }
 
@@ -1570,12 +1687,13 @@
     async function runSearch(q) {
       q = (q || '').trim();
       if (!q) return;
+      if (!eduOK(q, '') || ((STRONG_BAD.test(q) || WEAK_BAD.test(q)) && !subjOf(q) && !LECT_RX.test(q))) { const b = $('sbody'); if (b) b.innerHTML = NOT_ALLOWED_MSG; const i = $('sq'); if (i) i.blur(); return; }
       const rec = ld('tv3_q', []).filter(x => x.toLowerCase() !== q.toLowerCase());
       rec.unshift(q);
       sv('tv3_q', rec.slice(0, 14));
       const inp = $('sq');
       if (inp) { inp.value = q; inp.blur(); }
-      const my = ++searchTok, hm = histMap(), local = localMatches(q);
+      const my = ++searchTok, hm = histMap(), local = localMatches(q).filter(okForFeed);
       ctxLists.search = local.slice();
       $('sbody').innerHTML = (local.length ? `<div class="sechead">In your library</div>${local.map(id => rowHtml(id, 'search', hm)).join('')}` : '') + `<div class="sechead">From YouTube</div><div id="sonline">${skelRows(6)}</div>`;
       try {
@@ -1602,6 +1720,7 @@
         ['wl', wl ? 'check' : 'clock', wl ? 'Remove from Watch later' : 'Save to Watch later'],
         ['channel', 'subs', `Go to ${m.channel}`],
         ['share', 'share', 'Share video'],
+        ['sched', 'clock', 'Schedule to watch'],
         ['int', 'check', 'Interested'],
         ['noint', 'close', 'Not interested']
       ];
@@ -1995,6 +2114,7 @@
           ${srow('Auto-start lecture stopwatch', 'Starts the top timer when a video opens', tog('autoStudy', S.set.autoStudy !== false))}
           <div class="srow2" id="set-goal"><div class="st"><b>Daily learning goal</b><small>Shown on your Analytics page</small></div></div>
           ${seg('set-goal', S.set.goal || 120, [[30, '30m'], [60, '1h'], [120, '2h'], [180, '3h'], [240, '4h']])}
+          <div class="srow2"><div class="st"><b>Custom goal (hours)</b><small>Type any number, like 5 or 6.5</small></div><div class="goal-c"><input id="goal-in" type="number" inputmode="decimal" min="0.25" max="24" step="0.25" value="${+((S.set.goal || 120) / 60).toFixed(2)}"><button class="btn sm" data-act="goal-custom">Set</button></div></div>
         </div>
 
         <div class="set-sec"><h4>Home &amp; recommendations</h4>
@@ -2022,6 +2142,8 @@
             ${learnedHtml()}
           </details>
         </div>
+
+        <div class="set-sec"><h4>Study reminders</h4>${schedHtml()}</div>
 
         <div class="set-sec"><h4>Your data</h4>
           <div class="srow"><button class="btn grow" data-act="backup">${ic('download', 17)} Back up</button><button class="btn grow" data-act="restore">${ic('plus', 17)} Restore</button></div>
@@ -3008,12 +3130,19 @@
         sv(K.set, S.set); lastNoInt = null; toast('Restored'); if (S.tab === 'home') loadHome();
       },
       'unblock-all'() { S.set.blockV = []; S.set.blockCh = {}; S.set.blockCat = {}; sv(K.set, S.set); renderSettings(); toast('Hidden items restored'); },
+      'sched-q'(el) { const d = new Date(); const v = el.dataset.v; if (v === 'h1') d.setHours(d.getHours() + 1); else if (v === 't20') { d.setHours(20, 0, 0, 0); if (d < new Date()) d.setDate(d.getDate() + 1); } else { d.setDate(d.getDate() + 1); d.setHours(7, 0, 0, 0); } const i = $('sched-at'); if (i) i.value = toLocalInput(d); },
+      'sched-save'() { const i = $('sched-at'), at = i && i.value ? new Date(i.value).getTime() : 0; if (!at || at < Date.now() + 30000) { toast('Pick a time in the future'); return; } const l = ld('tv3_sched', []); l.push({ v: SCH.id, at, done: false }); sv('tv3_sched', l); askNotif(); closeSheet(); toast('Reminder set for ' + new Date(at).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })); },
+      'sched-gcal'() { const i = $('sched-at'), at = i && i.value ? new Date(i.value) : null; if (!at) { toast('Pick a time first'); return; } const f = d => d.toISOString().replace(/[-:]|\.\d{3}/g, ''), e = new Date(at.getTime() + 3600000); const u = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('Watch: ' + (M(SCH.id).title || 'lecture')) + '&dates=' + f(at) + '/' + f(e) + '&details=' + encodeURIComponent('https://youtu.be/' + SCH.id); window.open(u, '_blank'); },
+      'sched-ics'() { const i = $('sched-at'), at = i && i.value ? new Date(i.value) : null; if (!at) { toast('Pick a time first'); return; } const p = n => String(n).padStart(2, '0'), f = d => `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}T${p(d.getHours())}${p(d.getMinutes())}00`, e = new Date(at.getTime() + 3600000); const ttl = M(SCH.id).title || 'lecture'; downloadTextFile('vaultube-reminder.ics', ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Vaultube//EN', 'BEGIN:VEVENT', 'UID:' + SCH.id + at.getTime() + '@vaultube', 'DTSTAMP:' + f(new Date()), 'DTSTART:' + f(at), 'DTEND:' + f(e), 'SUMMARY:Watch: ' + ttl.replace(/[,;\n]/g, ' '), 'DESCRIPTION:https://youtu.be/' + SCH.id, 'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:Time to study', 'TRIGGER:PT0M', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n'), 'text/calendar'); toast('Open the file to add it to your calendar'); },
+      'sched-del'(el) { const [v, at] = el.dataset.k.split('|'); sv('tv3_sched', ld('tv3_sched', []).filter(x => !(x.v === v && String(x.at) === at))); renderSettings(); },
+      'notif-on'() { askNotif(true); setTimeout(renderSettings, 600); },
       mi(el) {
         const k = el.dataset.k, { id, ctx, pl } = menuCtx || {};
         if (k === 'save') saveSheet(id);
         else if (k === 'wl') { const a = togglePl('wl', id); closeSheet(); renderVisible(); toast(a ? 'Saved to Watch later' : 'Removed from Watch later'); }
         else if (k === 'channel') { closeSheet(); openChannelPage(M(id).channel); }
         else if (k === 'share') { closeSheet(); shareVideo(id); }
+        else if (k === 'sched') schedSheet(id);
         else if (k === 'int') { markInterest(id, true); closeSheet(); }
         else if (k === 'noint') { markInterest(id, false); closeSheet(); }
         else if (k === 'rmhist') { S.hist = S.hist.filter(h => h.v !== id); sv(K.hist, S.hist); closeSheet(); renderVisible(); toast('Removed from history'); }
@@ -3042,21 +3171,26 @@
       'set-pm'(el) { S.set.playerMode = el.dataset.v; sv(K.set, S.set); renderSettings(); if (S.cur) updateWatchPage(); },
       'set-tog'(el) { const k = el.dataset.k; S.set[k] = !(S.set[k] !== false); sv(K.set, S.set); renderSettings(); if (k === 'hideWatched' && S.tab === 'home') loadHome(); },
       'set-seek'(el) { S.set.seek = +el.dataset.v; sv(K.set, S.set); renderSettings(); },
+      'goal-custom'() {
+        const v = parseFloat(($('goal-in').value || '').replace(',', '.'));
+        if (!(v >= 0.25 && v <= 24)) { toast('Enter hours between 0.25 and 24'); return; }
+        S.set.goal = Math.round(v * 60); sv(K.set, S.set); renderSettings(); toast('Daily goal set to ' + fmtDurHuman(S.set.goal * 60));
+      },
       'set-goal'(el) { S.set.goal = +el.dataset.v; sv(K.set, S.set); renderSettings(); },
       'goto-goal'() { openSettings('goal'); },
+      'tg-add'() { tgDraft = { t: '', h: 10 }; tgSheet(); },
+      'tg-pick'(el) { tgDraft.t = el.dataset.t; tgSheet(); },
+      'tg-h'(el) { tgDraft.h = +el.dataset.v; tgSheet(); },
+      'tg-save'() {
+        if (!tgDraft.t) { toast('Pick a subject first'); return; }
+        S.set.targets = (S.set.targets || []).filter(x => x.t !== tgDraft.t).concat([{ t: tgDraft.t, h: tgDraft.h }]);
+        sv(K.set, S.set); closeSheet(); toast('Target saved'); renderAnalytics();
+      },
+      'tg-del'(el) { S.set.targets = (S.set.targets || []).filter(x => x.t !== el.dataset.t); sv(K.set, S.set); toast('Target removed'); renderAnalytics(); },
       'ui-auto'() { S.set.ui = 'auto'; sv(K.set, S.set); window.TV_UI(); renderSettings(); },
       'topic-del'(el) { S.set.topics = S.set.topics.filter(t => t !== el.dataset.v); if (!S.set.topics.length) S.set.topics = DEF_TOPICS.slice(); if (S.chip === el.dataset.v) { S.chip = 'All'; loadHome(); } sv(K.set, S.set); renderChips(); renderSettings(); },
-      'forget-all'() {
-        confirmSheet('Delete everything about you?', 'This erases watch history, study sessions, analytics, topic taps, search history and cached feeds on this device. Playlists, notes, subscriptions and settings stay.', 'Delete', () => {
-          S.hist = []; S.sessions = []; S.usage = {}; S.set.hits = {}; S.set.blockV = []; S.set.blockCh = {}; S.set.blockCat = {}; S.set.favCh = {}; S.set.favCat = {};
-          sv(K.hist, S.hist); sv(K.sess, S.sessions); sv(K.usage, S.usage); sv(K.set, S.set);
-          ['tv3_q', K.cache, K.subfeed].forEach(k => localStorage.removeItem(k));
-          Object.keys(PC).forEach(k => delete PC[k]); scache.clear();
-          renderVisible(); if (subOpen && S.sub && S.sub.kind === 'settings') renderSettings();
-          if (S.tab === 'home') loadHome();
-          toast('Everything about you was deleted');
-        });
-      },
+      'forget-all'() { wipeStep(0); },
+      'wipe-next'() { wipeStep(wipeI + 1); },
       'reset-interests'() { confirmSheet('Reset recommendations', 'Forget which topics you tapped? Your history and notes are not touched.', 'Reset', () => { S.set.hits = {}; sv(K.set, S.set); toast('Interests reset'); }); },
       'api-test'() {
         S.set.apiKey = ($('api-in').value || '').trim(); sv(K.set, S.set); apiDead = 0;
@@ -3068,12 +3202,13 @@
       backup() {
         const data = {};
         Object.values(K).forEach(k => { if (k !== K.cache) { const v = localStorage.getItem(k); if (v != null) data[k] = v; } });
-        downloadTextFile('tubevault-backup-' + todayKey() + '.json', JSON.stringify({ app: 'tubevault', v: 1, data }), 'application/json');
-        toast('Backup downloaded');
+        const n = Object.keys(data).length;
+        downloadTextFile('vaultube-backup-' + todayKey() + '.json', JSON.stringify({ app: 'tubevault', v: 2, at: Date.now(), data }), 'application/json');
+        toast('Backup saved (' + n + ' data sets) \u2014 check your Downloads folder');
       },
       restore() { $('restore-in').click(); },
       'clear-cache'() { Object.keys(PC).forEach(k => delete PC[k]); scache.clear(); localStorage.removeItem(K.cache); localStorage.removeItem(K.subfeed); toast('Search cache cleared'); },
-      'reset-all'() { confirmSheet('Erase everything', 'This deletes playlists, history, notes, subscriptions and settings on this device. It cannot be undone.', 'Erase', () => { Object.values(K).forEach(k => localStorage.removeItem(k)); location.reload(); }); },
+      'reset-all'() { confirmSheet('Erase everything', 'This deletes playlists, history, notes, subscriptions and settings on this device. It cannot be undone.', 'Erase', () => { window.__wiped = true; Object.values(K).forEach(k => localStorage.removeItem(k)); location.reload(); }); },
       'pick-photo'() { const i = $('photo-in'); if (i) i.click(); },
       'rm-photo'() { delete S.set.photo; sv(K.set, S.set); renderSettings(); if (S.tab === 'library') renderLibrary(); },
       'install-pwa'() {
@@ -3235,9 +3370,13 @@
         t.files[0].text().then(txt => {
           const d = JSON.parse(txt);
           if (!d || d.app !== 'tubevault' || !d.data) throw 0;
-          Object.entries(d.data).forEach(([k, v]) => { if (Object.values(K).includes(k)) localStorage.setItem(k, v); });
-          location.reload();
-        }).catch(() => toast('That file is not a Vaultube backup'));
+          const ent = Object.entries(d.data).filter(([k, v]) => Object.values(K).includes(k) && typeof v === 'string');
+          if (!ent.length) throw 0;
+          window.__wiped = true; /* stop autosave from overwriting the restored data while reloading */
+          ent.forEach(([k, v]) => localStorage.setItem(k, v));
+          t.value = ''; toast('Restored ' + ent.length + ' data sets \u2014 reloading');
+          setTimeout(() => location.reload(), 700);
+        }).catch(() => { t.value = ''; toast('That file is not a Vaultube backup'); });
       } else if (t.id === 'topics-in') {
         const l = [...new Set(t.value.split(',').map(x => x.trim()).filter(Boolean))].slice(0, 14);
         S.set.topics = l.length ? l : DEF_TOPICS.slice();
@@ -3405,5 +3544,45 @@
         }
       }, 20000);
     }
+
+    /* ==================== SCHEDULE / REMINDERS ==================== */
+    let SCH = { id: '' };
+    const toLocalInput = d => { const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
+    function schedSheet(id) {
+      SCH = { id };
+      const d = new Date(Date.now() + 3600000);
+      openSheet(`<div class="shead clamp2">Schedule: ${esc(M(id).title)}</div>
+        <div class="seg"><button data-act="sched-q" data-v="h1">In 1 hour</button><button data-act="sched-q" data-v="t20">Tonight 8 pm</button><button data-act="sched-q" data-v="t7">Tomorrow 7 am</button></div>
+        <input id="sched-at" type="datetime-local" value="${toLocalInput(d)}" style="width:100%;margin:.7rem 0;padding:.7rem;border-radius:12px;border:1px solid var(--line,#ddd);font:inherit">
+        <div class="srow"><button class="btn grow" data-act="sched-gcal">Google Calendar</button><button class="btn grow" data-act="sched-ics">.ics file</button></div>
+        <button class="btn red" data-act="sched-save" style="width:100%;margin-top:.5rem">Remind me in Vaultube</button>
+        <p class="hint" style="font-size:.78rem">Reminders arrive as a notification. For a guaranteed alert even when Vaultube is closed, also tap Add to calendar.</p>`);
+    }
+    function askNotif(force) {
+      if (!('Notification' in window)) { if (force) toast('Notifications are not supported here'); return; }
+      if (Notification.permission === 'default') Notification.requestPermission();
+      else if (force && Notification.permission === 'denied') toast('Notifications are blocked \u2014 enable them in Android Settings > Apps > Vaultube');
+    }
+    function notifyDue(s) {
+      const title = 'Time to study', body = M(s.v).title || 'Your scheduled lecture is ready', opt = { body, icon: './icon-192.png', badge: './icon-192.png', tag: 'vt-' + s.v + s.at, requireInteraction: true, vibrate: [200, 100, 200], data: { v: s.v } };
+      toast('Time to watch: ' + body);
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      const fb = () => { try { new Notification(title, opt); } catch (e) {} };
+      if (navigator.serviceWorker) navigator.serviceWorker.getRegistration().then(r => (r ? r.showNotification(title, opt) : fb())).catch(fb); else fb();
+    }
+    function fireDue() {
+      const l = ld('tv3_sched', []), now = Date.now(); let ch = false;
+      l.forEach(s => { if (!s.done && s.at <= now) { s.done = true; ch = true; notifyDue(s); } });
+      if (ch) sv('tv3_sched', l.filter(s => !s.done || now - s.at < 864e5));
+    }
+    function schedHtml() {
+      const l = ld('tv3_sched', []).filter(s => !s.done).sort((a, b) => a.at - b.at);
+      const perm = 'Notification' in window ? Notification.permission : 'unsupported';
+      const st = perm === 'granted' ? '' : `<button class="btn" data-act="notif-on" style="width:100%;margin-bottom:.5rem">Turn on notifications</button>`;
+      return st + (l.length ? l.map(s => `<div class="srow2"><div class="st"><b class="clamp2">${esc(M(s.v).title || s.v)}</b><small>${esc(new Date(s.at).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }))}</small></div><button class="link" data-act="sched-del" data-k="${s.v}|${s.at}">Cancel</button></div>`).join('') : '<p class="hint">Nothing scheduled. Use \u22EE \u2192 Schedule to watch on any lecture.</p>');
+    }
+    setInterval(fireDue, 15000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) fireDue(); });
+    setTimeout(fireDue, 2000);
 
     init();

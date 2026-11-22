@@ -1,5 +1,5 @@
 /* Vaultube service worker: offline app shell. Bump VERSION to push an update. */
-const VERSION = 'vaultube-v8';
+const VERSION = 'vaultube-v16';
 const SHELL = ['./', './index.html', './share.html', './styles.css', './app.js', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
 self.addEventListener('install', e => {
@@ -24,4 +24,9 @@ self.addEventListener('fetch', e => {
     const net = fetch(req).then(r => { if (r.ok) caches.open(VERSION).then(c => c.put(req, r.clone())); return r; }).catch(() => hit);
     return hit || net;
   }));
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => cs.length ? cs[0].focus() : self.clients.openWindow('./')));
 });
