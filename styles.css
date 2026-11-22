@@ -2114,3 +2114,26 @@
 .wo-bar i { display: block; height: 100%; background: #ff2e4c; transform-origin: left; animation: woShrink linear forwards; }
 @keyframes woShrink { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 #wipe-ov .btn { min-width: 12rem; height: 3rem; font-size: 1rem; }
+
+/* ==================== v12: refined splash (static first frame, cinematic reveal) ==================== */
+#splash { background: #0d0d0f; gap: 0; transition: opacity 0.45s ease; }
+#splash.out { opacity: 0; transform: none; }
+#splash::before { content: ""; position: absolute; inset: 0; background: radial-gradient(55% 38% at 50% 50%, rgba(255,46,76,0.13), transparent 72%); opacity: 0; animation: spFade 1.1s 0.1s ease-out forwards; }
+.sp-glow, .sp-ring2 { display: none; }
+.sp-logo { width: 6.5rem; height: 6.5rem; animation: none; filter: drop-shadow(0 0.75rem 2rem rgba(255,46,76,0.3)); }
+.sp-logo::after { content: ""; position: absolute; inset: 0; border-radius: 1.5rem; border: 1px solid rgba(255,70,95,0.55); opacity: 0; animation: spHalo 1.4s 0.3s cubic-bezier(.2,.6,.3,1) forwards; pointer-events: none; }
+.sp-tile { animation: none; }
+.sp-frame { stroke-dashoffset: 0; animation: none; }
+.sp-play { animation: none; }
+.sp-shine { fill: rgba(255,255,255,0.16); animation: spShine 1.1s 0.45s cubic-bezier(.4,0,.2,1) both; }
+.sp-name { position: absolute; top: calc(50% + 4.9rem); left: 0; right: 0; display: block; text-align: center; overflow: hidden; font-size: 2.25rem; line-height: 1.25; animation: none; }
+.sp-name span { display: inline-block; opacity: 1; transform: translateY(115%); animation: spRise 0.8s 0.4s cubic-bezier(.16,1,.3,1) forwards; }
+.sp-tag { position: absolute; top: calc(50% + 8.5rem); left: 0; right: 0; text-align: center; background: none; border: 0; padding: 0; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255,255,255,0.55); opacity: 0; animation: spFade 0.9s 0.85s ease-out forwards; }
+.sp-load { position: absolute; top: calc(50% + 10.4rem); left: 50%; margin: 0 0 0 -3.5rem; width: 7rem; height: 2px; background: rgba(255,255,255,0.1); opacity: 0; animation: spFade 0.4s 0.7s forwards; }
+.sp-load i { background: linear-gradient(90deg, #ff2e4c, #ff7a8c); animation: spLoad 1.0s 0.7s cubic-bezier(.65,0,.35,1) both; }
+@keyframes spFade { to { opacity: 1; } }
+@keyframes spRise { to { transform: none; } }
+@keyframes spHalo { 0% { opacity: 0.8; transform: scale(1); } 100% { opacity: 0; transform: scale(1.55); } }
+
+/* splash only on app launch, not on reloads */
+.nosplash #splash { display: none !important; }

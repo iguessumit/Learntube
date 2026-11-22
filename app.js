@@ -325,17 +325,16 @@
       return best;
     }
     /* Study-only filter: entertainment / low-value videos never get in. */
-    const STRONG_BAD = /\b(lofi|lo-fi|music|songs?|remix|lyrics|official video|trailer|movies?|film|web series|gaming|gameplay|walkthrough|minecraft|gta|comedy|funny|prank|memes?|vlogs?|reaction|asmr|celebrity|bollywood|cricket|ipl|football|roast|tiktok|reels?|shorts?|dance|whatsapp status|bgmi|pubg|free fire|netflix|anime|cartoon|serial|bigg boss|gossip|highlights|unboxing|challenge)\b/i;
-    const WEAK_BAD = /\b(news|breaking|live stream|podcast|motivation|motivational|episode|stories|story|interview|influencer)\b/i;
+    const STRONG_BAD = /\b(lofi|lo-fi|music videos?|songs?|remix|lyrics|official video|trailer|movies?|full movie|film songs?|web series|gaming|gameplay|walkthrough|minecraft|gta|comedy|funny|prank|memes?|vlogs?|blogs?|vlogger|travel vlog|travelling|trip vlog|road ?trip|riding|rider|motovlog|bike ride|village life|day in my life|mukbang|storytime|reaction|asmr|bollywood|cricket|ipl|football|roast|tiktok|reels?|shorts?|dance|whatsapp status|bgmi|pubg|free fire|netflix|anime|cartoons?|bigg boss|gossip|match highlights|unboxing|bhajan|ringtone|status video)\b/i;
     const LECT_RX = /\b(lecture|tutorial|course|class|chapter|lesson|revision|explained|crash course|full course|masterclass|jee|neet|dpp|pyq|ncert)\b/i;
+    /* Blocklist only: low-value entertainment is blocked, everything else (podcasts, documentaries, news, finance...) is allowed. */
     function eduOK(title, channel, desc) {
       if (!title) return true;
-      const t = title + ' ' + (channel || ''), sub = subjOf(t), lect = LECT_RX.test(t);
-      if (STRONG_BAD.test(t) && !(lect && sub)) return false;
-      if (WEAK_BAD.test(t) && !(sub || lect)) return false;
-      return !!(sub || lect || GOOD_RX.test(t + ' ' + String(desc || '').slice(0, 300)));
+      const t = title + ' ' + (channel || '');
+      if (STRONG_BAD.test(t) && !(LECT_RX.test(t) && subjOf(t))) return false;
+      return true;
     }
-    const NOT_ALLOWED_MSG = `<div class="empty"><b>Not available here.</b><br><br>Entertainment and time-pass videos are blocked in Vaultube. This space is for studying \u2014 pick a topic, learn it, and get back to your goals.</div>`;
+    const NOT_ALLOWED_MSG = `<div class="empty"><b>Not available here.</b><br><br>Entertainment videos (music, movies, vlogs, gaming, comedy and similar) are blocked in Vaultube. Search for something to learn instead.</div>`;
     function detectCategory(text) {
       const t = (text || '').toLowerCase();
       { const sb = subjOf(t); if (sb) return sb; }
@@ -1119,6 +1118,15 @@
     function continueList() {
       return S.hist.filter(h => h.t > 0 && h.w >= 10 && h.w / h.t < 0.95).slice(0, 5).map(h => h.v);
     }
+    const MODS = ['lecture', 'explained', 'revision', 'one shot', 'crash course', 'important questions', 'concept', 'chapter', 'tricks', 'previous year', 'full course', 'doubt'];
+    const pick = a => a[Math.floor(Math.random() * a.length)];
+    function shuffleTop(ids) { const a = ids.slice(), n = Math.min(a.length, 14); const top = a.slice(0, n).sort(() => Math.random() - 0.5); return top.concat(a.slice(n)); }
+    function refreshHome() {
+      if (S.tab !== 'home') return;
+      window.scrollTo({ top: 0 });
+      toast('Refreshing\u2026');
+      loadHome(true);
+    }
     function vaultPool() {
       const set = new Set(), hm = histMap();
       Object.keys(S.meta).forEach(id => { if (S.meta[id].title) set.add(id); });
@@ -1167,7 +1175,7 @@
       el.innerHTML = html || (S.chip === 'All' ? '' : `<div class="empty" style="grid-column:1/-1">Nothing here yet.<br>Tap + to add a YouTube link.</div>`);
     }
 
-    async function loadHome() {
+    async function loadHome(force) {
       const my = ++homeTok;
       H.err = false;
       H.recs = [];
@@ -1177,10 +1185,11 @@
 
       if (S.chip === 'All') {
         buildAllFeed();
+        if (force) H.ids = shuffleTop(H.ids);
         $('feed-extra').innerHTML = '';
         H.loading = false;
         renderFeed();
-        loadSmartRecommendations(my);
+        loadSmartRecommendations(my, force);
         return;
       }
 
@@ -1191,7 +1200,7 @@
       H.loading = true;
       renderFeed();
       try {
-        const r = await onlineSearch(chipQuery(chip));
+        const r = await onlineSearch(force ? chipQuery(chip) + ' ' + pick(MODS) : chipQuery(chip), { fresh: !!force });
         if (my !== homeTok) return;
         const online = ingest(r, chip);
         H.ids = rankIds(online.filter(okForFeed).concat(vault), 60);
@@ -1204,11 +1213,11 @@
       renderFeed();
     }
 
-    async function loadSmartRecommendations(my) {
-      const queries = interestQueries(4);
+    async function loadSmartRecommendations(my, force) {
+      const queries = interestQueries(4).map(q => (force ? q + ' ' + pick(MODS) : q));
       const ex = $('feed-extra');
       ex.innerHTML = `<div class="sechead"><span>Recommended for you</span><span style="font-size:0.78rem;color:var(--tx2)">Finding videos…</span></div><div class="feed">${skelCards(3)}</div>`;
-      const rs = await Promise.allSettled(queries.map(q => onlineSearch(q)));
+      const rs = await Promise.allSettled(queries.map(q => onlineSearch(q, { fresh: !!force })));
       if (my !== homeTok || S.chip !== 'All') return;
       const seen = new Set(H.ids.concat(H.cont || []));
       const pool = [];
@@ -1466,6 +1475,7 @@
           ${gt('g3', focus + '%', 'Focus', 'target')}
         </div>
 
+        <section class="gc">${gh('clock', 'Screen time in Vaultube', range === 'all' ? 'All time' : dRange, `<span class="chip">All time ${fmtDurHuman(totalAppSec())}</span>`)}<div class="gts" style="margin-top:.6rem"><div class="gt g1"><b class="tnum">${fmtDurHuman(cur.app)}</b><span>Time in app</span></div><div class="gt g2"><b class="tnum">${fmtDurHuman(Math.round(cur.app / Math.max(1, keys.filter(k => (S.usage[k] || {}).app).length)))}</b><span>Avg per active day</span></div></div></section>
         ${subjCard}
         <section class="gc">
           ${gh('chart', 'Daily activity', `${dRange} · learning vs other`, `<span class="chip">avg ${fmtDurHuman(Math.round(avgLine))}</span>`)}
@@ -1687,7 +1697,7 @@
     async function runSearch(q) {
       q = (q || '').trim();
       if (!q) return;
-      if (!eduOK(q, '') || ((STRONG_BAD.test(q) || WEAK_BAD.test(q)) && !subjOf(q) && !LECT_RX.test(q))) { const b = $('sbody'); if (b) b.innerHTML = NOT_ALLOWED_MSG; const i = $('sq'); if (i) i.blur(); return; }
+      if (!eduOK(q, '')) { const b = $('sbody'); if (b) b.innerHTML = NOT_ALLOWED_MSG; const i = $('sq'); if (i) i.blur(); return; }
       const rec = ld('tv3_q', []).filter(x => x.toLowerCase() !== q.toLowerCase());
       rec.unshift(q);
       sv('tv3_q', rec.slice(0, 14));
@@ -3037,7 +3047,7 @@
       'goto-api'() { openSettings('api'); },
       retry() { loadHome(); },
       'home-top'() { closeSheet(); closeSub(); setTab('home'); if (S.chip !== 'All') { S.chip = 'All'; renderChips(); loadHome(); } window.scrollTo({ top: 0, behavior: 'smooth' }); },
-      'tab-home'() { closeSheet(); closeSub(); if (S.tab === 'home') { window.scrollTo({ top: 0, behavior: 'smooth' }); return; } setTab('home'); },
+      'tab-home'() { closeSheet(); closeSub(); if (S.tab === 'home') { refreshHome(); return; } setTab('home'); },
       'tab-subs'() { closeSheet(); closeSub(); setTab('subs'); },
       'tab-library'() { closeSheet(); closeSub(); setTab('library'); },
       search() { openSearch(); },
@@ -3506,7 +3516,7 @@
 
     function init() {
       load();
-      $('subs-top-btn').innerHTML = ic('subs');
+      $('subs-top-btn').innerHTML = ic('subs'); updTimeChip();
       $('search-btn').innerHTML = ic('search');
       $('add-btn').innerHTML = ic('plus');
 
@@ -3531,7 +3541,8 @@
       loadHome();
 
       const sp = $('splash');
-      if (sp) { setTimeout(() => { sp.classList.add('out'); setTimeout(() => sp.remove(), 600); }, 1800); }
+      if (sp && document.documentElement.classList.contains('nosplash')) sp.remove();
+      else if (sp) { setTimeout(() => { sp.classList.add('out'); setTimeout(() => sp.remove(), 600); }, 1700); }
       if (new URLSearchParams(location.search).get('add')) { try { history.replaceState({}, '', location.pathname); } catch (e) {} setTimeout(() => openAdd(), 700); }
       else if (!handleShare()) setTimeout(checkClip, 500);
       if ('IntersectionObserver' in window) {
@@ -3545,6 +3556,9 @@
       }, 20000);
     }
 
+    function totalAppSec() { return Object.values(S.usage || {}).reduce((a, r) => a + (r.app || 0), 0); }
+    function updTimeChip() { const c = $('time-chip'); if (c) c.textContent = fmtDurHuman(totalAppSec()); }
+    setInterval(updTimeChip, 15000); setTimeout(updTimeChip, 500);
     /* ==================== SCHEDULE / REMINDERS ==================== */
     let SCH = { id: '' };
     const toLocalInput = d => { const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
@@ -3581,6 +3595,17 @@
       const st = perm === 'granted' ? '' : `<button class="btn" data-act="notif-on" style="width:100%;margin-bottom:.5rem">Turn on notifications</button>`;
       return st + (l.length ? l.map(s => `<div class="srow2"><div class="st"><b class="clamp2">${esc(M(s.v).title || s.v)}</b><small>${esc(new Date(s.at).toLocaleString([], { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }))}</small></div><button class="link" data-act="sched-del" data-k="${s.v}|${s.at}">Cancel</button></div>`).join('') : '<p class="hint">Nothing scheduled. Use \u22EE \u2192 Schedule to watch on any lecture.</p>');
     }
+    /* pull-down to refresh on Home */
+    (function () {
+      const st = document.createElement('style'); st.textContent = 'body{overscroll-behavior-y:contain}#ptr{position:fixed;left:50%;top:0;transform:translate(-50%,-60px);z-index:60;background:var(--bg2,#222);color:var(--tx,#fff);border:1px solid rgba(128,128,128,.35);padding:.45rem .9rem;border-radius:999px;font-size:.8rem;box-shadow:0 4px 14px rgba(0,0,0,.25);pointer-events:none;transition:transform .15s}';
+      document.head.appendChild(st);
+      const ind = document.createElement('div'); ind.id = 'ptr'; document.body.appendChild(ind);
+      let y0 = 0, pull = 0, on = false;
+      const show = (y, t) => { ind.textContent = t; ind.style.transform = 'translate(-50%,' + (y - 60 + 70) + 'px)'; };
+      document.addEventListener('touchstart', e => { const h = $('view-home'); on = S.tab === 'home' && window.scrollY <= 0 && h && h.contains(e.target); pull = 0; y0 = e.touches[0].clientY; }, { passive: true });
+      document.addEventListener('touchmove', e => { if (!on) return; const dy = e.touches[0].clientY - y0; if (dy <= 0 || window.scrollY > 0) { pull = 0; ind.style.transform = 'translate(-50%,-60px)'; return; } pull = Math.min(dy * 0.5, 80); show(pull, pull >= 60 ? 'Release to refresh' : 'Pull to refresh'); }, { passive: true });
+      document.addEventListener('touchend', () => { if (!on) return; on = false; ind.style.transform = 'translate(-50%,-60px)'; if (pull >= 60) refreshHome(); pull = 0; }, { passive: true });
+    })();
     setInterval(fireDue, 15000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) fireDue(); });
     setTimeout(fireDue, 2000);
