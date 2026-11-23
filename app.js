@@ -1027,17 +1027,19 @@
 
     /* YouTube-style card: rounded edge-to-edge thumbnail, round channel logo, 2-line title, one meta line, vertical dots. */
     function cardHtml(id, ctx, hm, resume) {
-      const m = M(id), h = hm[id];
+      const m = M(id), h = hm[id], vw = String(m.views || '').replace(/\s*views?$/i, '');
       return `
-        <article class="card" data-act="play" data-id="${id}" data-ctx="${ctx}">
+        <article class="card yt" data-act="play" data-id="${id}" data-ctx="${ctx}">
           ${thumbBox(id, m, h, 'thumb', resume)}
-          <div class="cbody">
+          <h3 class="ctitle ytt" data-t="${id}">${esc(m.title)}</h3>
+          <div class="ytm">
             <span class="cav" data-act="open-channel" data-ch="${esc(m.channel)}">${avatar(m.channel)}</span>
-            <div class="ct">
-              <h3 class="ctitle" data-t="${id}">${esc(m.title)}</h3>
-              <p class="csub" data-c="${id}">${esc(subline(m))}</p>
+            <div class="ct"><p class="ytch">${esc(m.channel)}</p><p class="csub">${vw ? '\u25B7 ' + esc(vw) : ''}${m.pub ? ' &nbsp;' + esc(m.pub) : ''}</p></div>
+            <div class="yta">
+              <button class="ib${inPl('liked', id) ? ' on' : ''}" data-act="q-like" data-id="${id}" aria-label="Like">${ic('like', 22)}</button>
+              <button class="ib${inPl('wl', id) ? ' on' : ''}" data-act="q-save" data-id="${id}" aria-label="Watch later">${ic('save', 22)}</button>
+              <button class="ib mnu" data-act="menu" data-id="${id}" aria-label="More">${ic('more', 22)}</button>
             </div>
-            <button class="ib mnu" data-act="menu" data-id="${id}" aria-label="More">${ic('more', 20)}</button>
           </div>
         </article>`;
     }
@@ -1127,6 +1129,47 @@
       toast('Refreshing\u2026');
       loadHome(true);
     }
+    /* ===== Interest engine: learns topic phrases, channels & subjects from what you watch/like/save, never repeats what it already showed ===== */
+    let SEEN = new Set(ld('tv3_seen', []));
+    function markSeen(ids) { ids.forEach(i => SEEN.add(i)); const a = [...SEEN].slice(-400); SEEN = new Set(a); sv('tv3_seen', a); }
+    const STOPW = new Set('the and for with from that this your you are how what why not all can will new best full free live one shot class lecture chapter part video videos hindi english explained complete batch lec ep episode official channel'.split(' '));
+    function titleTerms(t) {
+      const w = String(t || '').toLowerCase().replace(/[^a-z0-9\u0900-\u097f ]+/g, ' ').split(/\s+/).filter(x => x.length > 2 && !STOPW.has(x) && !/^\d+$/.test(x)), o = [];
+      for (let i = 0; i < w.length - 1; i++) o.push(w[i] + ' ' + w[i + 1]);
+      return o;
+    }
+    function interestTerms() {
+      const now = Date.now(), t = {};
+      const add = (id, w) => new Set(titleTerms(M(id).title)).forEach(b => { const e = t[b] || (t[b] = { w: 0, n: 0 }); e.w += w; e.n++; });
+      S.hist.slice(0, 100).forEach(h => { const rec = Math.exp(-(now - h.at) / (21 * 864e5)), comp = h.t > 0 ? Math.min(1, h.w / h.t) : 0.3; add(h.v, rec * (0.5 + comp) + Math.min(1, (h.studySec || 0) / 1800) * rec); });
+      (PL('liked') || { items: [] }).items.slice(0, 40).forEach(id => add(id, 1.2));
+      S.playlists.filter(p => p.id !== 'liked').forEach(p => p.items.slice(0, 30).forEach(id => add(id, 0.6)));
+      return Object.entries(t).filter(([k, e]) => e.n >= 2 || subjOf(k)).map(([k, e]) => [k, e.w]).sort((a, b) => b[1] - a[1]).slice(0, 40);
+    }
+    function engineQueries(n) {
+      const pf = profile(), src = [];
+      Object.entries(pf.cat).forEach(([c, w]) => src.push([chipQuery(c), w * 1.2]));
+      Object.entries(pf.ch).forEach(([c, w]) => src.push([c, w]));
+      interestTerms().forEach(([k, w]) => src.push([k, w]));
+      if (src.length < 3) S.set.topics.forEach(t => { if (!(S.set.blockCat[t] >= 3)) src.push([chipQuery(t), 1]); });
+      const out = [], pool = src.slice();
+      while (out.length < n && pool.length) {
+        let r = Math.random() * pool.reduce((a, x) => a + x[1] + 0.05, 0), i = 0;
+        for (; i < pool.length; i++) { r -= pool[i][1] + 0.05; if (r <= 0) break; }
+        const q = pool.splice(Math.min(i, pool.length - 1), 1)[0][0].trim();
+        if (q && !out.includes(q)) out.push(q);
+      }
+      return out;
+    }
+    function relevant(id, pf, terms) {
+      const m = M(id), has = Object.keys(pf.cat).length || Object.keys(pf.ch).length;
+      if (!has) return true;
+      const t = String(m.title || '').toLowerCase(), sb = subjOf(t + ' ' + (m.channel || ''));
+      if ((pf.cat[m.cat] || 0) > 0.3 || (pf.ch[m.channel] || 0) > 0.3 || (sb && (pf.cat[sb] || 0) > 0.3)) return true;
+      if ((pf.cat.JEE || pf.cat.NEET) && /\b(jee|neet|ncert|class 1[12])\b/.test(t)) return true;
+      return terms.slice(0, 30).some(([k]) => t.includes(k));
+    }
+    function freshRank(ids, limit) { const r = rankIds(ids, 200).filter(id => !SEEN.has(id)); return r.length >= Math.min(6, ids.length) ? r.slice(0, limit) : rankIds(ids, limit); }
     function vaultPool() {
       const set = new Set(), hm = histMap();
       Object.keys(S.meta).forEach(id => { if (S.meta[id].title) set.add(id); });
@@ -1135,7 +1178,7 @@
     }
     function buildAllFeed() {
       H.cont = continueList();
-      H.ids = rankIds(vaultPool().filter(id => !H.cont.includes(id)), 30);
+      H.ids = freshRank(vaultPool().filter(id => !H.cont.includes(id)), 30);
     }
     function personalFeed() {
       return continueList().concat(rankIds(vaultPool(), 40)).filter((x, i, a) => a.indexOf(x) === i);
@@ -1214,21 +1257,25 @@
     }
 
     async function loadSmartRecommendations(my, force) {
-      const queries = interestQueries(4).map(q => (force ? q + ' ' + pick(MODS) : q));
       const ex = $('feed-extra');
       ex.innerHTML = `<div class="sechead"><span>Recommended for you</span><span style="font-size:0.78rem;color:var(--tx2)">Finding videos…</span></div><div class="feed">${skelCards(3)}</div>`;
-      const rs = await Promise.allSettled(queries.map(q => onlineSearch(q, { fresh: !!force })));
-      if (my !== homeTok || S.chip !== 'All') return;
-      const seen = new Set(H.ids.concat(H.cont || []));
-      const pool = [];
-      rs.forEach(r => { if (r.status === 'fulfilled') ingest(r.value).forEach(id => { if (!seen.has(id)) { seen.add(id); pool.push(id); } }); });
-      const hm = histMap();
-      const ids = rankIds(pool.filter(id => !isDone(hm[id]) && okForFeed(id)), 40);
+      const pf = profile(), terms = interestTerms(), hm = histMap(), seen = new Set(H.ids.concat(H.cont || [])), pool = [];
+      for (let round = 0; round < 2; round++) {
+        const qs = engineQueries(round ? 4 : 5).map(q => (force && Math.random() < 0.5 ? q + ' ' + pick(MODS) : q));
+        const rs = await Promise.allSettled(qs.map(q => onlineSearch(q, { fresh: !!force || round > 0 })));
+        if (my !== homeTok || S.chip !== 'All') return;
+        rs.forEach(r => { if (r.status === 'fulfilled') ingest(r.value).forEach(id => { if (!seen.has(id)) { seen.add(id); pool.push(id); } }); });
+        if (pool.filter(id => !isDone(hm[id]) && okForFeed(id) && relevant(id, pf, terms) && !SEEN.has(id)).length >= 10) break;
+      }
+      let cand = pool.filter(id => !isDone(hm[id]) && okForFeed(id) && relevant(id, pf, terms));
+      const fresh = cand.filter(id => !SEEN.has(id)); if (fresh.length >= 4) cand = fresh;
+      const ids = rankIds(cand, 40);
       if (!ids.length) {
         ex.innerHTML = H.ids.length || (H.cont && H.cont.length) ? '' : `<div class="empty">${emptyFeedHtml().replace('grid-column:1/-1', '')}</div>`;
         return;
       }
       H.recs = ids;
+      markSeen(H.ids.concat(ids));
       ctxLists.home = (H.cont || []).concat(H.ids, ids);
       ex.innerHTML = `<div class="sechead"><span>Recommended for you</span><span style="font-size:0.78rem;color:var(--tx2)">Personalised</span></div><div class="feed">${ids.map(id => cardHtml(id, 'home', hm)).join('')}</div>`;
     }
@@ -3140,6 +3187,8 @@
         sv(K.set, S.set); lastNoInt = null; toast('Restored'); if (S.tab === 'home') loadHome();
       },
       'unblock-all'() { S.set.blockV = []; S.set.blockCh = {}; S.set.blockCat = {}; sv(K.set, S.set); renderSettings(); toast('Hidden items restored'); },
+      'q-like'(el) { togglePl('liked', el.dataset.id); el.classList.toggle('on', inPl('liked', el.dataset.id)); },
+      'q-save'(el) { togglePl('wl', el.dataset.id); el.classList.toggle('on', inPl('wl', el.dataset.id)); },
       'sched-q'(el) { const d = new Date(); const v = el.dataset.v; if (v === 'h1') d.setHours(d.getHours() + 1); else if (v === 't20') { d.setHours(20, 0, 0, 0); if (d < new Date()) d.setDate(d.getDate() + 1); } else { d.setDate(d.getDate() + 1); d.setHours(7, 0, 0, 0); } const i = $('sched-at'); if (i) i.value = toLocalInput(d); },
       'sched-save'() { const i = $('sched-at'), at = i && i.value ? new Date(i.value).getTime() : 0; if (!at || at < Date.now() + 30000) { toast('Pick a time in the future'); return; } const l = ld('tv3_sched', []); l.push({ v: SCH.id, at, done: false }); sv('tv3_sched', l); askNotif(); closeSheet(); toast('Reminder set for ' + new Date(at).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })); },
       'sched-gcal'() { const i = $('sched-at'), at = i && i.value ? new Date(i.value) : null; if (!at) { toast('Pick a time first'); return; } const f = d => d.toISOString().replace(/[-:]|\.\d{3}/g, ''), e = new Date(at.getTime() + 3600000); const u = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('Watch: ' + (M(SCH.id).title || 'lecture')) + '&dates=' + f(at) + '/' + f(e) + '&details=' + encodeURIComponent('https://youtu.be/' + SCH.id); window.open(u, '_blank'); },
@@ -3557,7 +3606,7 @@
     }
 
     function totalAppSec() { return Object.values(S.usage || {}).reduce((a, r) => a + (r.app || 0), 0); }
-    function updTimeChip() { const c = $('time-chip'); if (c) c.textContent = fmtDurHuman(totalAppSec()); }
+    function updTimeChip() { const c = $('time-chip'); if (c) c.textContent = fmtDurHuman((S.usage[todayKey()] || {}).app || 0); }
     setInterval(updTimeChip, 15000); setTimeout(updTimeChip, 500);
     /* ==================== SCHEDULE / REMINDERS ==================== */
     let SCH = { id: '' };
