@@ -1,5 +1,5 @@
 /* Vaultube service worker: offline app shell. Bump VERSION to push an update. */
-const VERSION = 'vaultube-v22';
+const VERSION = 'vaultube-v23';
 const SHELL = ['./', './index.html', './share.html', './styles.css', './app.js', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
 self.addEventListener('install', e => {
@@ -13,10 +13,14 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== location.origin) return; // YouTube, search APIs and images always go to the network
-  // Pages (including share-target links with ?url=...): network first, cached shell when offline.
+  // Pages: open instantly from the cached shell (no network wait), refresh the cache in the background.
   if (req.mode === 'navigate') {
-    const fallback = /share\.html$/.test(url.pathname) ? './share.html' : './index.html';
-    e.respondWith(fetch(req).catch(() => caches.match(fallback)));
+    const shell = /share\.html$/.test(url.pathname) ? './share.html' : './index.html';
+    e.respondWith(caches.match(shell, { ignoreSearch: true }).then(hit => {
+      const net = fetch(req).then(r => { if (r.ok && !url.search) caches.open(VERSION).then(c => c.put(shell, r.clone())); return r; }).catch(() => hit);
+      if (hit) e.waitUntil(net.catch(() => {}));
+      return hit || net;
+    }));
     return;
   }
   // Static files: cached copy first, refreshed in the background.

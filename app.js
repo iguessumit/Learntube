@@ -472,9 +472,9 @@
       if (!r || !r.length) { try { r = await mirrorSearch(q); } catch (e) { lastErr = lastErr || e; r = null; } }
       if (!r || !r.length) {
         const stale = PC['s:' + key];
-        if (stale) return stale.r;
+        if (stale) return Object.assign(stale.r.slice(), { stale: true });
         const st = starterFor(key);
-        if (st.length) return st;
+        if (st.length) return Object.assign(st.slice(), { starter: true });
         throw lastErr || new Error('search failed');
       }
       scache.set(key, { t: Date.now(), r });
@@ -1260,16 +1260,23 @@
       const ex = $('feed-extra');
       ex.innerHTML = `<div class="sechead"><span>Recommended for you</span><span style="font-size:0.78rem;color:var(--tx2)">Finding videos…</span></div><div class="feed">${skelCards(3)}</div>`;
       const pf = profile(), terms = interestTerms(), hm = histMap(), seen = new Set(H.ids.concat(H.cont || [])), pool = [];
+      let live = 0;
       for (let round = 0; round < 2; round++) {
         const qs = engineQueries(round ? 4 : 5).map(q => (force && Math.random() < 0.5 ? q + ' ' + pick(MODS) : q));
         const rs = await Promise.allSettled(qs.map(q => onlineSearch(q, { fresh: !!force || round > 0 })));
         if (my !== homeTok || S.chip !== 'All') return;
-        rs.forEach(r => { if (r.status === 'fulfilled') ingest(r.value).forEach(id => { if (!seen.has(id)) { seen.add(id); pool.push(id); } }); });
+        rs.forEach(r => { if (r.status === 'fulfilled') { if (!r.value.starter && !r.value.stale) live++; ingest(r.value).forEach(id => { if (!seen.has(id)) { seen.add(id); pool.push(id); } }); } });
         if (pool.filter(id => !isDone(hm[id]) && okForFeed(id) && relevant(id, pf, terms) && !SEEN.has(id)).length >= 10) break;
       }
       let cand = pool.filter(id => !isDone(hm[id]) && okForFeed(id) && relevant(id, pf, terms));
       const fresh = cand.filter(id => !SEEN.has(id)); if (fresh.length >= 4) cand = fresh;
       const ids = rankIds(cand, 40);
+      if (!live && fresh.length < 4) {
+        const why = API_ST.msg ? esc(API_ST.msg) : 'YouTube search servers are not responding.';
+        ex.innerHTML = `<div class="empty" style="margin:.75rem">No new videos could be loaded.<br><small>${why}</small><br><br><button class="btn pri" data-act="retry">Try again</button> ${hasKey() ? '' : '<button class="btn" data-act="goto-api">Add free API key</button>'}</div>`;
+        if (force) toast('No new videos \u2014 search servers unreachable');
+        return;
+      }
       if (!ids.length) {
         ex.innerHTML = H.ids.length || (H.cont && H.cont.length) ? '' : `<div class="empty">${emptyFeedHtml().replace('grid-column:1/-1', '')}</div>`;
         return;
